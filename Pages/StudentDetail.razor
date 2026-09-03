@@ -17,7 +17,7 @@ else if (_student is null)
 else
 {
     <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 page-head">
-        OnClick="@(() => Nav.NavigateTo("elever"))" />
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("elever"))" />
         <div class="page-head-title">
             <MudText Typo="Typo.h5">@_student.Name</MudText>
             <MudText Typo="Typo.caption" Class="mud-text-secondary">

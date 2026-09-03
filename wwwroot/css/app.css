@@ -188,6 +188,27 @@ code {
     color: #2F8F7D;
 }
 
+/* Klickbar .edok-förklaring. Ankaret positionerar popovern under själva ordet. */
+.edok-anchor {
+    position: relative;
+    display: inline-block;
+}
+
+.edok-link {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+    .edok-link:hover,
+    .edok-link:focus-visible {
+        text-decoration: underline solid;
+    }
+
+.edok-popover {
+    max-width: 22rem;
+}
+
 /* Adornment-ikonerna är aria-hidden men fångar ändå fokus vid klick, vilket ger en
    tillgänglighetsvarning i konsolen. Låt klicket gå vidare till knappen runt ikonen. */
 .mud-input-adornment-icon,

@@ -57,7 +57,25 @@
             </MudStack>
 
             <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
-                Välj en tidigare exporterad <code>.edok</code>-fil.
+                Välj en tidigare exporterad <span class="edok-anchor">
+                    <code class="edok-link" role="button" tabindex="0"
+                          @onclick="@(() => _explainEdok = true)"
+                          @onkeydown="@ExplainKeyDown">.edok</code>
+                    <MudPopover Open="_explainEdok" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                                Class="pa-4 edok-popover" Elevation="8">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                            <MudText Typo="Typo.subtitle2">Vad är en .edok-fil?</MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                           OnClick="@(() => _explainEdok = false)" aria-label="Stäng" />
+                        </MudStack>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                            Elevkollens eget format för säkerhetskopior — en vanlig fil som innehåller
+                            alla dina elever och bedömningar. Innehållet är krypterat med ditt lösenord
+                            (AES-256-GCM), så ingen kan läsa filen utan det. Den kan bara öppnas här i
+                            Elevkollen, och tappar du lösenordet går datan inte att få tillbaka.
+                        </MudText>
+                    </MudPopover>
+                </span>-fil.
             </MudText>
 
             <InputFile id="backupFile" @ref="_fileInput" class="visually-hidden"
@@ -107,6 +125,19 @@
     private bool _busy;
     private int _students;
     private int _assessments;
+    private bool _explainEdok;
+
+    private void ExplainKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            _explainEdok = true;
+        }
+        else if (e.Key == "Escape")
+        {
+            _explainEdok = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadCountsAsync();
 
