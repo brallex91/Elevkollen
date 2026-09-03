@@ -4,7 +4,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
-<PageTitle>@(_student?.Name ?? "Elev")</PageTitle>
+<AppTitle Title="@(_student?.Name ?? "Elev")" />
 
 @if (_loading)
 {

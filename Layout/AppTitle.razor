@@ -1,0 +1,7 @@
+@* Sidtitel med appnamnet först: "Elevkollen – Elever" *@
+<PageTitle>Elevkollen – @Title</PageTitle>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+}

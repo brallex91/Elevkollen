@@ -3,7 +3,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime Js
 
-<PageTitle>@(_student is null ? "Rapport" : $"Rapport – {_student.Name}")</PageTitle>
+<AppTitle Title="@(_student is null ? "Rapport" : $"Rapport – {_student.Name}")" />
 
 @if (_loading)
 {
