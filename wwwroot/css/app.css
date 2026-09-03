@@ -209,6 +209,63 @@ code {
     max-width: 22rem;
 }
 
+/* Diskret versionsstämpel längst ned. Färgerna följer temat, så den tonas ned
+   lika mycket i ljust som mörkt läge. */
+
+/* Huvudinnehållet fyller alltid fönstret, så footern trycks ned till botten
+   i stället för att flyta mitt på sidan när innehållet är kort. */
+.mud-main-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding: 1.5rem 1rem 0.5rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    opacity: 0.6;
+    transition: opacity 150ms ease;
+}
+
+    .app-footer:hover {
+        opacity: 1;
+    }
+
+.app-footer-mark {
+    display: grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 5px;
+    color: #fff;
+    background: linear-gradient(135deg, #5FBFAC 0%, #3FA894 100%);
+}
+
+    .app-footer-mark svg {
+        width: 0.8rem;
+        height: 0.8rem;
+    }
+
+.app-footer-dot {
+    opacity: 0.5;
+}
+
+.app-footer-version {
+    font-variant-numeric: tabular-nums;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: var(--mud-palette-action-default-hover);
+}
+
 /* Adornment-ikonerna är aria-hidden men fångar ändå fokus vid klick, vilket ger en
    tillgänglighetsvarning i konsolen. Låt klicket gå vidare till knappen runt ikonen. */
 .mud-input-adornment-icon,

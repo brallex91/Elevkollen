@@ -148,7 +148,7 @@
     private Task<IEnumerable<SubjectDto>> SearchSubjectsAsync(string? text, CancellationToken _) =>
         Task.FromResult(_subjects.Where(s =>
             string.IsNullOrWhiteSpace(text) ||
-            s.Name.Contains(text, StringComparison.OrdinalIgnoreCase)));
+            s.Name.Contains(text, StringComparison.OrdinalIgnoreCase)).DistinctBy(s => s.Code));
 
     private Task<IEnumerable<string>> SearchContentAsync(string? text, CancellationToken _)
     {
@@ -156,6 +156,7 @@
             .Where(c => c.YearSpan == _yearSpan)
             .SelectMany(c => c.Items)
             .Where(i => string.IsNullOrWhiteSpace(text) || i.Contains(text, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.Ordinal)
             ?? [];
 
         return Task.FromResult(items);
@@ -178,6 +179,7 @@
             .Where(c => year is null || c.Year == year)
             .Where(c => string.IsNullOrWhiteSpace(text) || c.Text.Contains(text, StringComparison.OrdinalIgnoreCase))
             .Select(c => c.Text)
+            .Distinct(StringComparer.Ordinal)
             ?? [];
 
         return Task.FromResult(items);

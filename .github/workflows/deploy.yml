@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Versionen räknas fram ur antalet commits, så hela historiken behövs.
+          fetch-depth: 0
 
       - name: Installera .NET
         uses: actions/setup-dotnet@v5

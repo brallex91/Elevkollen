@@ -238,8 +238,38 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
             .OrderBy(s => s.Name, StringComparer.CurrentCulture)];
     }
 
-    // ---------- Startsida ----------
+    /// <summary>
+    /// De centrala innehåll som faktiskt bedömts i ett ämne, för täckningsgraden.
+    /// Filtreras på klass när en sådan anges. Returnerar bara distinkta texter — vem
+    /// som bedömts spelar ingen roll, en punkt räknas som täckt vid första bedömningen.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetAssessedContentsAsync(string subjectCode, string? className = null)
+    {
+        var db = await DbAsync();
+        var assessments = await db.InvokeAsync<List<AssessmentRecord>>("getAllAssessments");
 
+        IEnumerable<AssessmentRecord> query = assessments.Where(a => a.SubjectCode == subjectCode);
+
+        if (!string.IsNullOrWhiteSpace(className))
+        {
+            var students = await db.InvokeAsync<List<StudentRecord>>("getStudents");
+
+            var ids = students
+                .Where(s => ClassLabel.For(s.SchoolYear, s.ClassName) == className)
+                .Select(s => s.Id ?? 0)
+                .ToHashSet();
+
+            query = query.Where(a => ids.Contains(a.StudentId));
+        }
+
+        return [.. query
+            .Select(a => a.CentralContent)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c!)
+            .Distinct(StringComparer.Ordinal)];
+    }
+
+    // ---------- Startsida ----------
     /// <summary>Sammanställning för startsidan: nyckeltal, fördelning per klass och ämne.</summary>
     public async Task<DashboardDto> GetDashboardAsync()
     {

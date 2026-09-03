@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <Version>1.0.0</Version>
+    <!-- Versionen sätts av SetVersionFromGit nedan. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <!-- Klientprojektet ligger i roten, så default-globbing skulle annars dra in
          det delade projektets filer och skräp från andra projekts obj/bin. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);Elevkollen.Shared\**;*\obj\**;*\bin\**</DefaultItemExcludes>
@@ -26,5 +29,28 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.*" />
     <PackageReference Include="MudBlazor" Version="9.*" />
   </ItemGroup>
+  <!--
+    Versionsstämpeln i footern. Patch-siffran är antalet commits och suffixet är
+    kortaste hash, så varje commit ger en unik version utan manuell bokföring.
+    Saknas git (t.ex. i en nedladdad zip) behålls <Version> ovan.
+  -->
+  <Target Name="SetVersionFromGit" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo">
+    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitCount" />
+      <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
+    </Exec>
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash" />
+    </Exec>
+
+    <PropertyGroup Condition="'$(GitExitCode)' == '0' AND '$(GitCommitCount)' != ''">
+      <Version>1.0.$(GitCommitCount)</Version>
+      <AssemblyVersion>1.0.$(GitCommitCount).0</AssemblyVersion>
+      <FileVersion>1.0.$(GitCommitCount).0</FileVersion>
+      <InformationalVersion>1.0.$(GitCommitCount)+$(GitCommitHash)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
 
 </Project>

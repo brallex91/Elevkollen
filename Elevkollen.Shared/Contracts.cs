@@ -240,3 +240,89 @@ public sealed record GradingCriterionDto(
     int Year,
     string GradeStep,
     string Text);
+
+// ---------- Täckningsgrad ----------
+
+/// <summary>
+/// Hur stor del av ett ämnes centrala innehåll som blivit bedömt. Beräknas per klass:
+/// en punkt räknas som täckt så snart minst en elev bedömts mot den.
+/// </summary>
+public sealed record CoverageDto(
+    string SubjectName,
+    string YearSpan,
+    int Covered,
+    int Total,
+    IReadOnlyList<CoverageGroupDto> Groups,
+    IReadOnlyList<string> Unmatched)
+{
+    public double Share => Total == 0 ? 0 : (double)Covered / Total;
+}
+
+/// <summary>Punkterna under en rubrik, med markering för vilka som är bedömda.</summary>
+public sealed record CoverageGroupDto(
+    string Heading,
+    IReadOnlyList<CoverageItemDto> Items)
+{
+    public int Covered => Items.Count(i => i.IsCovered);
+}
+
+public sealed record CoverageItemDto(string Text, bool IsCovered);
+
+/// <summary>
+/// Jämför läroplanens centrala innehåll mot det läraren faktiskt bedömt. Ren logik utan
+/// beroenden, så den är enkel att enhetstesta.
+///
+/// Kopplingen görs på texten själv, eftersom en bedömning inte lagrar något stabilare id.
+/// Omformulerar Skolverket en punkt bryts därför kopplingen till äldre bedömningar — de
+/// hamnar då i <see cref="CoverageDto.Unmatched"/> i stället för att tyst försvinna.
+/// </summary>
+public static class CoverageCalculator
+{
+    public static CoverageDto For(
+        SyllabusDto syllabus,
+        string yearSpan,
+        IEnumerable<string> assessedContents)
+    {
+        var assessed = assessedContents
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var groups = syllabus.CentralContents
+            .Where(g => g.YearSpan == yearSpan)
+            .Select(g => new CoverageGroupDto(
+                g.Heading,
+                [.. g.Items.Distinct(StringComparer.Ordinal)
+                    .Select(i => new CoverageItemDto(i, assessed.Contains(Key(i))))]))
+            .Where(g => g.Items.Count > 0)
+            .ToArray();
+
+        var known = groups
+            .SelectMany(g => g.Items)
+            .Select(i => Key(i.Text))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var unmatched = assessedContents
+            .Where(c => !string.IsNullOrWhiteSpace(c) && !known.Contains(Key(c)))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(c => c, StringComparer.CurrentCulture)
+            .ToArray();
+
+        var items = groups.SelectMany(g => g.Items).ToArray();
+
+        return new CoverageDto(
+            syllabus.Name,
+            yearSpan,
+            items.Count(i => i.IsCovered),
+            items.Length,
+            groups,
+            unmatched);
+    }
+
+    /// <summary>
+    /// Normaliserar texten inför jämförelse. Skolverkets renskrivning kan ge olika
+    /// mellanrum över tid, och det ska inte räknas som en ny punkt.
+    /// </summary>
+    private static string Key(string text) =>
+        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+}

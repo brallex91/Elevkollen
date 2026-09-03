@@ -1,0 +1,31 @@
+@using System.Reflection
+
+@* Diskret versionsstämpel längst ned. Versionen sätts av SetVersionFromGit i
+   Elevkollen.csproj, så den räknas upp automatiskt vid varje commit. *@
+
+<footer class="app-footer no-print">
+    <span class="app-footer-mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" />
+        </svg>
+    </span>
+    <span>Elevkollen</span>
+    <span class="app-footer-dot">·</span>
+    <MudTooltip Text="@($"Bygge {Build}")">
+        <span class="app-footer-version">@Label</span>
+    </MudTooltip>
+    <span class="app-footer-dot">·</span>
+    <span>All elevdata stannar i den här webbläsaren</span>
+</footer>
+
+@code {
+    /// <summary>"1.0.42+ee6385b" — allt före + är versionen, efter är commit-hashen.</summary>
+    private static readonly string Informational =
+        typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? "1.0.0";
+
+    private static readonly string Label = "v" + Informational.Split('+')[0];
+
+    private static readonly string Build = Informational.Split('+') is [_, var hash] ? hash : "okänt";
+}

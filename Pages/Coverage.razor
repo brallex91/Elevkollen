@@ -1,0 +1,180 @@
+@page "/tackningsgrad"
+@inject StudentStore Store
+@inject SyllabusClient Api
+
+<AppTitle Title="Täckningsgrad" />
+
+<MudText Typo="Typo.h5" Class="mb-1">Täckningsgrad</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">
+    Hur stor del av ämnets centrala innehåll du hunnit bedöma. En punkt räknas som täckt
+    så snart minst en elev i klassen har en bedömning mot den.
+</MudText>
+
+<MudCard Elevation="1" Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4" Wrap="Wrap.Wrap">
+        <MudSelect T="string" @bind-Value="_className" @bind-Value:after="LoadAsync" Label="Klass"
+                   Variant="Variant.Outlined" Clearable="true" Style="min-width: 200px;">
+            @foreach (var c in _classes)
+            {
+                <MudSelectItem T="string" Value="@c">@c</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="_subjectCode" @bind-Value:after="SubjectChangedAsync" Label="Ämne"
+                   Variant="Variant.Outlined" Style="min-width: 220px;">
+            @foreach (var s in _subjects)
+            {
+                <MudSelectItem T="string" Value="@s.Code">@s.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        @if (_yearSpans.Length > 0)
+        {
+            <MudSelect T="string" @bind-Value="_yearSpan" @bind-Value:after="LoadAsync" Label="Årskursspann"
+                       Variant="Variant.Outlined" Style="min-width: 160px;">
+                @foreach (var y in _yearSpans)
+                {
+                    <MudSelectItem T="string" Value="@y">Årskurs @y</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_subjects.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            Inga bedömningar ännu. Täckningsgraden visas när du har bedömt något.
+        </MudAlert>
+    }
+    else if (_coverage is null || _coverage.Total == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            Läroplanen kunde inte hämtas för det här urvalet.
+        </MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6" Class="mb-1">
+            Du har bedömt @_coverage.Covered av @_coverage.Total punkter
+            i @_coverage.SubjectName åk @_coverage.YearSpan.
+        </MudText>
+        <MudProgressLinear Color="Color.Success" Size="Size.Large" Rounded="true" Class="mb-6"
+                           Value="@(_coverage.Share * 100)" />
+
+        @foreach (var group in _coverage.Groups)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-4">
+                @(string.IsNullOrWhiteSpace(group.Heading) ? "Centralt innehåll" : group.Heading)
+                <MudText Typo="Typo.caption" Class="mud-text-secondary" Inline="true">
+                    @group.Covered av @group.Items.Count
+                </MudText>
+            </MudText>
+
+            <MudList T="string" Dense="true">
+                @foreach (var item in group.Items)
+                {
+                    <MudListItem T="string" Icon="@(item.IsCovered ? Icons.Material.Filled.CheckCircle : Icons.Material.Outlined.Circle)"
+                                 IconColor="@(item.IsCovered ? Color.Success : Color.Default)">
+                        <MudText Typo="Typo.body2" Class="@(item.IsCovered ? "" : "mud-text-secondary")">
+                            @item.Text
+                        </MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        @if (_coverage.Unmatched.Count > 0)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-6">
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    @_coverage.Unmatched.Count @(_coverage.Unmatched.Count == 1 ? "bedömning" : "bedömningar")
+                    är kopplade till text som inte längre finns i läroplanen för det här spannet.
+                    De räknas inte in ovan. Det beror oftast på att bedömningen gjordes för ett
+                    annat årskursspann, eller att Skolverket har formulerat om punkten.
+                </MudText>
+                @foreach (var text in _coverage.Unmatched)
+                {
+                    <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">• @text</MudText>
+                }
+            </MudAlert>
+        }
+    }
+</MudCard>
+
+@code {
+    private CoverageDto? _coverage;
+    private IReadOnlyList<string> _classes = [];
+    private IReadOnlyList<SubjectDto> _subjects = [];
+    private SyllabusDto? _syllabus;
+    private string[] _yearSpans = [];
+    private string? _className;
+    private string? _subjectCode;
+    private string? _yearSpan;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _classes = await Store.GetClassesAsync();
+        _className = _classes.FirstOrDefault();
+
+        // Bara bedömda ämnen är meningsfulla här — resten har per definition noll täckning.
+        _subjects = await Store.GetAssessedSubjectsAsync();
+        _subjectCode = _subjects.FirstOrDefault()?.Code;
+
+        await SubjectChangedAsync();
+    }
+
+    private async Task SubjectChangedAsync()
+    {
+        _syllabus = null;
+        _yearSpans = [];
+        _yearSpan = null;
+
+        if (!string.IsNullOrWhiteSpace(_subjectCode))
+        {
+            _loading = true;
+            _syllabus = await Api.GetSyllabusAsync(_subjectCode);
+            _yearSpans = _syllabus?.CentralContents.Select(c => c.YearSpan).Distinct().ToArray() ?? [];
+            _yearSpan = SpanFor(SchoolYearOf(_className)) is { } s && _yearSpans.Contains(s)
+                ? s
+                : _yearSpans.FirstOrDefault();
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        if (_syllabus is null || _yearSpan is null || string.IsNullOrWhiteSpace(_subjectCode))
+        {
+            _coverage = null;
+        }
+        else
+        {
+            var assessed = await Store.GetAssessedContentsAsync(_subjectCode, _className);
+            _coverage = CoverageCalculator.For(_syllabus, _yearSpan, assessed);
+        }
+
+        _loading = false;
+    }
+
+    /// <summary>Klassbeteckningen inleds med årskursen, t.ex. "4B" — den styr förvalt spann.</summary>
+    private static int? SchoolYearOf(string? className) =>
+        !string.IsNullOrWhiteSpace(className) && char.IsDigit(className[0])
+            ? className[0] - '0'
+            : null;
+
+    private static string? SpanFor(int? year) => year switch
+    {
+        >= 1 and <= 3 => "1-3",
+        >= 4 and <= 6 => "4-6",
+        >= 7 and <= 9 => "7-9",
+        _ => null,
+    };
+}
