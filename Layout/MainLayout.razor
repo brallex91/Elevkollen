@@ -45,7 +45,7 @@ else
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
                         <span>@ReminderText</span>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
-                                   OnClick="@(() => Nav.NavigateTo("/sakerhetskopia"))">
+                                   OnClick="@(() => Nav.NavigateTo("sakerhetskopia"))">
                             Ta en kopia
                         </MudButton>
                     </MudStack>
@@ -131,11 +131,11 @@ else
 
         if (!Auth.IsLoggedIn && !onLogin)
         {
-            Nav.NavigateTo("/login");
+            Nav.NavigateTo("login");
         }
         else if (Auth.IsLoggedIn && onLogin)
         {
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("");
         }
     }
 
@@ -146,7 +146,7 @@ else
     private async Task LogoutAsync()
     {
         await Auth.LogoutAsync();
-        Nav.NavigateTo("/login");
+        Nav.NavigateTo("login");
     }
 
     public void Dispose() => Auth.Changed -= OnAuthChanged;

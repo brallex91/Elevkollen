@@ -17,7 +17,7 @@ else if (_student is null)
 else
 {
     <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 page-head">
-        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/elever"))" />
+        OnClick="@(() => Nav.NavigateTo("elever"))" />
         <div class="page-head-title">
             <MudText Typo="Typo.h5">@_student.Name</MudText>
             <MudText Typo="Typo.caption" Class="mud-text-secondary">
@@ -31,7 +31,7 @@ else
         <MudSpacer />
         <div class="page-actions">
             <MudButton StartIcon="@Icons.Material.Filled.Print" Variant="Variant.Outlined"
-                       OnClick="@(() => Nav.NavigateTo($"/elever/{Id}/rapport"))">
+                       OnClick="@(() => Nav.NavigateTo($"elever/{Id}/rapport"))">
                 Rapport
             </MudButton>
             <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Variant="Variant.Filled"

@@ -11,7 +11,7 @@
     <MudSpacer />
     <div class="page-actions">
         <MudButton StartIcon="@Icons.Material.Filled.FactCheck" Color="Color.Primary"
-                   Variant="Variant.Outlined" Href="/klassbedomning">
+                   Variant="Variant.Outlined" Href="klassbedomning">
             Klassbedömning
         </MudButton>
         <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary"
@@ -108,7 +108,7 @@ else
         _loading = false;
     }
 
-    private void Open(StudentDto student) => Nav.NavigateTo($"/elever/{student.Id}");
+    private void Open(StudentDto student) => Nav.NavigateTo($"elever/{student.Id}");
 
     private async Task EditAsync(StudentDto? student)
     {
