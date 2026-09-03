@@ -1,0 +1,619 @@
+
+#blazor-error-ui {
+    color-scheme: light;
+    background: rgba(30, 46, 44, 0.96);
+    color: #DCE9E4;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+    box-sizing: border-box;
+    display: none;
+    left: 50%;
+    right: auto;
+    bottom: 1rem;
+    width: min(52rem, calc(100vw - 2rem));
+    transform: translateX(-50%);
+    padding: 0.85rem 4rem 0.85rem 1rem;
+    position: fixed;
+    z-index: 2000;
+}
+
+    #blazor-error-ui .reload {
+        color: #5FBFAC;
+        font-weight: 600;
+        margin-left: 0.5rem;
+        text-decoration: none;
+    }
+
+        #blazor-error-ui .reload:hover {
+            text-decoration: underline;
+        }
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 1rem;
+        top: 0.55rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        line-height: 1.65rem;
+        text-align: center;
+        border-radius: 999px;
+        color: #C3D7D1;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+        #blazor-error-ui .dismiss:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+.blazor-error-boundary {
+    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: white;
+}
+
+    .blazor-error-boundary::after {
+        content: "Ett fel har inträffat."
+    }
+
+/* Startskärmen medan WebAssembly laddas. Samma mörka palett som appen, så att
+   övergången till MudBlazor blir omärklig. */
+.boot {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: radial-gradient(circle at 50% 0%, #233936 0%, #182927 55%, #131F1E 100%);
+    color: #DCE9E4;
+    font-family: Roboto, "Segoe UI", system-ui, sans-serif;
+}
+
+.boot-mark {
+    width: 4.5rem;
+    height: 4.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    color: #fff;
+    background: linear-gradient(135deg, #5FBFAC 0%, #3FA894 100%);
+    box-shadow: 0 16px 40px rgba(63, 168, 148, 0.35);
+    animation: boot-pulse 2s ease-in-out infinite;
+}
+
+    .boot-mark svg {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+.boot-title {
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.boot-bar {
+    width: min(16rem, 70vw);
+    height: 4px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+    /* Blazor sätter --blazor-load-percentage först när nedladdningen börjar.
+       Fram till dess glider stapeln fram och tillbaka av sig själv. */
+    .boot-bar span {
+        display: block;
+        height: 100%;
+        width: var(--blazor-load-percentage, 40%);
+        border-radius: 999px;
+        background: linear-gradient(90deg, #4E8D9C, #5FBFAC);
+        transition: width 0.2s ease-out;
+        animation: boot-slide 1.4s ease-in-out infinite;
+    }
+
+.boot-text {
+    font-size: 0.8125rem;
+    color: rgba(220, 233, 228, 0.65);
+    min-height: 1.2em;
+}
+
+    .boot-text::after {
+        content: var(--blazor-load-percentage-text, "Laddar…");
+    }
+
+.boot-note {
+    font-size: 0.75rem;
+    color: rgba(220, 233, 228, 0.42);
+}
+
+@keyframes boot-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+@keyframes boot-slide {
+    0%, 100% {
+        transform: translateX(-40%);
+    }
+
+    50% {
+        transform: translateX(40%);
+    }
+}
+
+/* Så fort riktig progress finns slutar stapeln vandra och visar bara andelen. */
+[style*="--blazor-load-percentage"] .boot-bar span {
+    animation: none;
+    transform: none;
+}
+
+code {
+    color: #2F8F7D;
+}
+
+/* Adornment-ikonerna är aria-hidden men fångar ändå fokus vid klick, vilket ger en
+   tillgänglighetsvarning i konsolen. Låt klicket gå vidare till knappen runt ikonen. */
+.mud-input-adornment-icon,
+.mud-input-adornment svg {
+    pointer-events: none;
+}
+
+.mud-input-adornment .mud-icon-button {
+    pointer-events: auto;
+}
+
+/* Ingen sida får någonsin kräva horisontell scroll. */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.mud-main-content {
+    overflow-x: hidden;
+}
+
+/* Långa läroplanstexter ska brytas, inte bredda sidan. */
+.mud-table-cell,
+.mud-card,
+.picker-item {
+    overflow-wrap: anywhere;
+}
+
+.mud-table-container {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.picker-item {
+    white-space: normal;
+}
+
+/* Sidhuvuden: titel och knappar bryter till egna rader i stället för att klämmas ihop. */
+.page-head {
+    row-gap: 0.75rem;
+}
+
+.page-head-title {
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+    .page-actions .mud-button-root {
+        white-space: nowrap;
+    }
+
+@media (max-width: 599.98px) {
+    .page-actions {
+        width: 100%;
+    }
+
+        .page-actions .mud-button-root {
+            flex: 1 1 auto;
+        }
+}
+
+/* Klassbedömning: raderna blir kort på mobil så inget innehåll kläms bort. */
+.class-select {
+    max-width: 240px;
+}
+
+.progress-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+
+/* Rubriken "Betygssteg" får aldrig brytas mitt i ordet. */
+.class-table .grade-col {
+    width: 1%;
+    white-space: nowrap;
+}
+
+@media (max-width: 959.98px) {
+    .class-select {
+        max-width: 100%;
+    }
+
+    .class-table .mud-table-cell {
+        min-width: 0;
+    }
+
+        .class-table .mud-table-cell .mud-input-control,
+        .class-table .progress-buttons {
+            width: 100%;
+        }
+
+    .progress-buttons .mud-button-root {
+        flex: 1 1 6rem;
+    }
+}
+
+/* Filväljaren döljs och ersätts av en MudButton med svensk text. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+    color: var(--bs-secondary-color);
+    text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+    text-align: start;
+}
+
+/* Startsidans diagram: lätta och byggda i ren CSS/SVG i stället för ett extra bibliotek. */
+.dash-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dash-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    height: 16rem;
+}
+
+.dash-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    height: 100%;
+    min-width: 0;
+}
+
+.dash-bar-track {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+.dash-bar-fill {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    background: linear-gradient(180deg, var(--mud-palette-primary), var(--mud-palette-primary-darken));
+    transition: height 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dash-bar-label {
+    width: 100%;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Introduktionsguide: allt suddas utom det aktuella steget pratar om. */
+.tour-shield {
+    position: fixed;
+    inset: 0;
+    z-index: 2099;
+    cursor: default;
+}
+
+.tour-blur {
+    position: fixed;
+    z-index: 2100;
+    /* Följer temat: mjukt grönt dis i ljust läge, djupare i mörkt. */
+    background: var(--mud-palette-overlay-dark);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: tour-fade 220ms ease-out;
+}
+
+.tour-hole {
+    position: fixed;
+    z-index: 2101;
+    pointer-events: none;
+    border-radius: 12px;
+    box-shadow: 0 0 0 2px var(--mud-palette-primary);
+    transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
+}
+
+.tour-card {
+    position: fixed;
+    z-index: 2102;
+    width: min(28.75rem, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    animation: tour-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes tour-fade {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes tour-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tour-blur,
+    .tour-card,
+    .tour-hole {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* Rapportvyn: skär bort appskalet och skriv ut arket i svärta på vitt. */
+.report-muted {
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+.report-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.report-head-meta {
+    text-align: right;
+}
+
+.report-period {
+    min-width: 12rem;
+}
+
+.report-table-wrap {
+    max-width: 100%;
+}
+
+/* Procentbredder i stället för px, så kolumnerna fyller arket i stället för att
+   klumpa ihop sig till höger på breda skärmar. */
+.report-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+    .report-table th,
+    .report-table td {
+        vertical-align: top;
+        overflow-wrap: anywhere;
+    }
+
+    .report-table .num {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .report-table .nowrap {
+        white-space: nowrap;
+    }
+
+    /* Sammanfattning: ämnet tar plats, siffrorna hålls smala. */
+    .report-table:not(.detail) th:first-child,
+    .report-table:not(.detail) td:first-child {
+        width: 40%;
+    }
+
+    .report-table:not(.detail) th:not(:first-child),
+    .report-table:not(.detail) td:not(:first-child) {
+        width: 15%;
+    }
+
+    /* Detaljtabell: datum, arbetsområde, utveckling, steg, kommentar. */
+    .report-table.detail th:nth-child(1),
+    .report-table.detail td:nth-child(1) {
+        width: 12%;
+    }
+
+    .report-table.detail th:nth-child(2),
+    .report-table.detail td:nth-child(2) {
+        width: 44%;
+    }
+
+    .report-table.detail th:nth-child(3),
+    .report-table.detail td:nth-child(3) {
+        width: 13%;
+    }
+
+    .report-table.detail th:nth-child(4),
+    .report-table.detail td:nth-child(4) {
+        width: 8%;
+    }
+
+    .report-table.detail th:nth-child(5),
+    .report-table.detail td:nth-child(5) {
+        width: 23%;
+    }
+
+/* På mobil blir varje rad ett kort med etikett framför värdet. */
+@media (max-width: 767.98px) {
+    .report-head-meta {
+        text-align: left;
+    }
+
+    .report-period {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .report-table,
+    .report-table tbody,
+    .report-table tr,
+    .report-table td {
+        display: block;
+        width: 100% !important;
+    }
+
+        .report-table thead {
+            display: none;
+        }
+
+        .report-table tr {
+            border: 1px solid var(--mud-palette-table-lines);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .report-table td {
+            border: 0 !important;
+            padding: 0.2rem 0 !important;
+            text-align: left !important;
+        }
+
+            .report-table td::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: var(--mud-palette-text-secondary);
+            }
+
+            .report-table td:empty {
+                display: none;
+            }
+}
+
+@media print {
+    .no-print,
+    .tour-shield,
+    .tour-blur,
+    .tour-hole,
+    .tour-card,
+    .mud-appbar,
+    .mud-drawer,
+    .mud-overlay,
+    .mud-snackbar-provider,
+    .mud-popover-provider {
+        display: none !important;
+    }
+
+    .mud-main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    html, body, .mud-layout, .report-sheet {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .report-sheet {
+        box-shadow: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+    }
+
+    .report-sheet .mud-text-secondary,
+    .report-sheet .report-muted {
+        color: #444 !important;
+        opacity: 1;
+    }
+
+    .report-sheet table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    /* Utskriften ska alltid vara en riktig tabell, även om skärmen är smal. */
+    .report-table,
+    .report-table tbody,
+    .report-table tr,
+    .report-table td {
+        display: revert !important;
+    }
+
+    .report-table thead {
+        display: table-header-group !important;
+    }
+
+    .report-table td::before {
+        content: none !important;
+    }
+
+    .report-head {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .report-head-meta {
+        text-align: right !important;
+    }
+
+    .report-sheet th,
+    .report-sheet td {
+        border: 1px solid #999 !important;
+        padding: 4px 6px !important;
+        font-size: 11px;
+        color: #000 !important;
+    }
+
+    .report-table .num {
+        text-align: right !important;
+    }
+
+    /* Håll ihop ett ämne på samma sida när det går. */
+    .report-section {
+        break-inside: avoid;
+    }
+
+    @page {
+        margin: 14mm;
+    }
+}

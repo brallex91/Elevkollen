@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="Elevkollen.csproj" />
+  <Project Path="Elevkollen.Shared/Elevkollen.Shared.csproj" />
+</Solution>

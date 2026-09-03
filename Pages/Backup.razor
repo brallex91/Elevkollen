@@ -1,0 +1,187 @@
+@page "/sakerhetskopia"
+@inject BackupService Backups
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+<PageTitle>Säkerhetskopia</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Säkerhetskopia</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">
+    All elevdata finns bara i den här webbläsaren. Exportera regelbundet för att kunna
+    flytta datan till en annan dator eller återställa den om webbläsardata rensas.
+</MudText>
+
+<MudGrid Spacing="4">
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="1" Class="pa-4" Style="height: 100%;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Download" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Exportera</MudText>
+            </MudStack>
+
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                @Count(_students, "elev", "elever") och @Count(_assessments, "bedömning", "bedömningar")
+                sparas i en krypterad fil.
+            </MudText>
+
+            <MudTextField @bind-Value="_exportPassword" Label="Lösenord" Variant="Variant.Outlined"
+                          InputType="@(_showExport ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End" AdornmentIcon="@(_showExport ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                          OnAdornmentClick="@(() => _showExport = !_showExport)" Class="mb-2" />
+
+            <MudButton StartIcon="@Icons.Material.Filled.Casino" Size="Size.Small" OnClick="SuggestAsync" Class="mb-4">
+                Föreslå starkt lösenord
+            </MudButton>
+
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">
+                Spara lösenordet på ett säkert ställe. Utan det går filen inte att återställa.
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.Download" OnClick="ExportAsync"
+                       Disabled="@(_busy || _exportPassword.Length < 8)">
+                @(_busy ? "Krypterar…" : "Exportera")
+            </MudButton>
+            @if (_exportPassword.Length is > 0 and < 8)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error">Minst 8 tecken.</MudText>
+            }
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="1" Class="pa-4" Style="height: 100%;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Upload" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Importera</MudText>
+            </MudStack>
+
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+                Välj en tidigare exporterad <code>.edok</code>-fil.
+            </MudText>
+
+            <InputFile id="backupFile" @ref="_fileInput" class="visually-hidden"
+                       accept=".edok" OnChange="FileChosen" />
+
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-4" Wrap="Wrap.Wrap">
+                <MudButton HtmlTag="label" for="backupFile" Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.FolderOpen">
+                    Välj fil
+                </MudButton>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary text-truncate">
+                    @(_fileName ?? "Ingen fil vald")
+                </MudText>
+            </MudStack>
+
+            <MudTextField @bind-Value="_importPassword" Label="Lösenord" Variant="Variant.Outlined"
+                          InputType="@(_showImport ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End" AdornmentIcon="@(_showImport ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                          OnAdornmentClick="@(() => _showImport = !_showImport)" Class="mb-4" />
+
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                Importen ersätter all nuvarande data i den här webbläsaren.
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.Upload" OnClick="ImportAsync"
+                       Disabled="@(_busy || !_fileChosen || _importPassword.Length == 0)">
+                @(_busy ? "Dekrypterar…" : "Importera")
+            </MudButton>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@if (_busy)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+}
+
+@code {
+    private InputFile? _fileInput;
+    private string _exportPassword = "";
+    private string _importPassword = "";
+    private bool _showExport;
+    private bool _showImport;
+    private bool _fileChosen;
+    private string? _fileName;
+    private bool _busy;
+    private int _students;
+    private int _assessments;
+
+    protected override async Task OnInitializedAsync() => await LoadCountsAsync();
+
+    private static string Count(int value, string singular, string plural) =>
+        $"{value} {(value == 1 ? singular : plural)}";
+
+    private async Task LoadCountsAsync() =>
+        (_students, _assessments) = await Backups.GetCountsAsync();
+
+    private async Task SuggestAsync()
+    {
+        _exportPassword = await Backups.SuggestPasswordAsync();
+        _showExport = true;
+    }
+
+    private async Task ExportAsync()
+    {
+        _busy = true;
+        try
+        {
+            await Backups.ExportAsync(_exportPassword);
+            Snackbar.Add("Säkerhetskopian har laddats ned.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Exporten misslyckades: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void FileChosen(InputFileChangeEventArgs e)
+    {
+        _fileChosen = true;
+        _fileName = e.File.Name;
+    }
+
+    private async Task ImportAsync()
+    {
+        if (_fileInput?.Element is not { } element)
+        {
+            return;
+        }
+
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            "Ersätt all data?",
+            $"Nuvarande {Count(_students, "elev", "elever")} och {Count(_assessments, "bedömning", "bedömningar")} tas bort och ersätts av filens innehåll.",
+            yesText: "Importera", cancelText: "Avbryt");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var (students, assessments) = await Backups.ImportAsync(element, _importPassword);
+            Snackbar.Add($"Importerade {Count(students, "elev", "elever")} och {Count(assessments, "bedömning", "bedömningar")}.", Severity.Success);
+
+            _importPassword = "";
+            _fileChosen = false;
+            _fileName = null;
+            await Backups.ClearFileInputAsync(element);
+            await LoadCountsAsync();
+        }
+        catch (BackupException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

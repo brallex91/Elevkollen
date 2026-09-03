@@ -1,0 +1,161 @@
+@page "/klassoversikt"
+@inject StudentStore Store
+@inject NavigationManager Nav
+
+<PageTitle>Klassöversikt</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-1">Klassöversikt</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">
+    Elever på raderna och arbetsområden på kolumnerna. Färgen visar den senaste bedömningen,
+    så att det syns direkt vem som behöver mer stöd.
+</MudText>
+
+<MudCard Elevation="1" Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4" Wrap="Wrap.Wrap">
+        <MudSelect T="string" @bind-Value="_className" @bind-Value:after="LoadAsync" Label="Klass"
+                   Variant="Variant.Outlined" Clearable="true" Style="min-width: 200px;">
+            @foreach (var c in _classes)
+            {
+                <MudSelectItem T="string" Value="@c">@c</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string" @bind-Value="_subjectCode" @bind-Value:after="LoadAsync" Label="Ämne"
+                   Variant="Variant.Outlined" Clearable="true" Style="min-width: 220px;">
+            @foreach (var s in _subjects)
+            {
+                <MudSelectItem T="string" Value="@s.Code">@s.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSpacer />
+
+        @foreach (var value in ProgressText.All.Reverse())
+        {
+            <MudChip T="string" Size="Size.Small" Color="@value.Color()" Variant="Variant.Filled">
+                @value.Label()
+            </MudChip>
+        }
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_data is null || _data.Rows.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            Inga elever att visa. Lägg till elever först.
+        </MudAlert>
+    }
+    else if (_data.Columns.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            Inga bedömningar ännu för det här urvalet.
+        </MudAlert>
+    }
+    else
+    {
+        <div style="overflow-x: auto;">
+            <MudSimpleTable Dense="true" Hover="true" Bordered="true" Elevation="0" Style="min-width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="position: sticky; left: 0; z-index: 1; background: var(--mud-palette-surface); min-width: 180px;">
+                            Elev
+                        </th>
+                        @foreach (var c in _data.Columns)
+                        {
+                            <th style="min-width: 120px;">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">@c.SubjectName</MudText>
+                                <MudText Typo="Typo.body2">@c.WorkArea</MudText>
+                            </th>
+                        }
+                        <th style="min-width: 110px;">Uppnått</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _data.Rows)
+                    {
+                        <tr>
+                            <td style="position: sticky; left: 0; z-index: 1; background: var(--mud-palette-surface);">
+                                <MudLink Href="@($"/elever/{row.StudentId}")" Typo="Typo.body2">@row.StudentName</MudLink>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary d-block">
+                                    @ClassLabel.For(row.SchoolYear, row.ClassName)
+                                </MudText>
+                            </td>
+                            @foreach (var cell in row.Cells)
+                            {
+                                <td>
+                                    @if (cell is null)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">–</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudTooltip Text="@Tooltip(cell)">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                                     Color="@cell.Progress.Color()">
+                                                @(cell.GradeStep ?? cell.Progress.Symbol())
+                                            </MudChip>
+                                        </MudTooltip>
+                                    }
+                                </td>
+                            }
+                            <td>
+                                <MudProgressLinear Color="Color.Success" Rounded="true" Size="Size.Small"
+                                                   Value="@Ratio(row)" />
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @row.Cells.Count(c => c?.Progress == Progress.Achieved)/@_data.Columns.Count
+                                </MudText>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        </div>
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @_data.Rows.Count elever · @_data.Columns.Count arbetsområden
+            </MudText>
+            <MudSpacer />
+            <MudButton StartIcon="@Icons.Material.Filled.FactCheck" Variant="Variant.Outlined"
+                       OnClick="@(() => Nav.NavigateTo("/klassbedomning"))">
+                Bedöm klassen
+            </MudButton>
+        </MudStack>
+    }
+</MudCard>
+
+@code {
+    private ClassOverviewDto? _data;
+    private IReadOnlyList<string> _classes = [];
+    private IReadOnlyList<SubjectDto> _subjects = [];
+    private string? _className;
+    private string? _subjectCode;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _classes = await Store.GetClassesAsync();
+        _className = _classes.FirstOrDefault();
+        _subjects = await Store.GetAssessedSubjectsAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _data = await Store.GetClassOverviewAsync(_className, _subjectCode);
+        _loading = false;
+    }
+
+    private double Ratio(OverviewRowDto row) =>
+        _data is null || _data.Columns.Count == 0
+            ? 0
+            : 100.0 * row.Cells.Count(c => c?.Progress == Progress.Achieved) / _data.Columns.Count;
+
+    private static string Tooltip(OverviewCellDto cell) =>
+        $"{cell.Progress.Label()} · {cell.Date:yyyy-MM-dd}"
+        + (cell.AssessmentCount > 1 ? $" · {cell.AssessmentCount} bedömningar" : "");
+}

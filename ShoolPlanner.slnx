@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ShoolPlanner.csproj" />
+  <Project Path="ShoolPlanner.Shared/ShoolPlanner.Shared.csproj" />
+</Solution>

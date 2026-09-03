@@ -1,0 +1,325 @@
+@page "/klassbedomning"
+@inject StudentStore Store
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Klassbedömning</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1">
+    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/elever"))" />
+    <MudText Typo="Typo.h5">Klassbedömning</MudText>
+</MudStack>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-6 ml-12">
+    Välj arbetsområde en gång och sätt sedan utveckling för flera elever samtidigt.
+</MudText>
+<MudCard Elevation="1" Class="pa-4 mb-6">
+    <SyllabusPicker @bind-SubjectCode="_subjectCode"
+                    @bind-SubjectCode:after="SyncExistingAsync"
+                    @bind-SubjectName="_subjectName"
+                    @bind-WorkArea="_workArea"
+                    @bind-WorkArea:after="SyncExistingAsync"
+                    @bind-CentralContent="_centralContent"
+                    @bind-GradingCriterion="_gradingCriterion"
+                    @bind-Date="_date"
+                    @bind-Date:after="SyncExistingAsync"
+                    SchoolYear="_schoolYear"
+                    GradeStepSuggested="OnGradeStepSuggested" />
+</MudCard>
+
+<MudCard Elevation="1" Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 page-head">
+        <MudSelect T="string" @bind-Value="_className" @bind-Value:after="LoadAsync" Label="Klass"
+                   Variant="Variant.Outlined" Clearable="true" Class="class-select">
+            @foreach (var c in _classes)
+            {
+                <MudSelectItem T="string" Value="@c">@c</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSpacer />
+        <div class="page-actions align-center">
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">Sätt alla:</MudText>
+            @foreach (var p in ProgressText.All)
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => SetAll(p))">@p.Label()</MudButton>
+            }
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => SetAll(null))">Rensa</MudButton>
+        </div>
+    </MudStack>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_rows.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+            Inga elever att visa. Lägg till elever först.
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_rows" Hover="true" Elevation="0" Dense="true" Breakpoint="Breakpoint.Md" T="Row"
+                  Class="class-table">
+            <HeaderContent>
+                <MudTh>Elev</MudTh>
+                <MudTh>Utveckling</MudTh>
+                <MudTh Class="grade-col">Betygssteg</MudTh>
+                <MudTh>Kommentar</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Elev">
+                    <MudText Typo="Typo.body2">@context.Student.Name</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @ClassLabel.For(context.Student.SchoolYear, context.Student.ClassName)
+                        @if (context.AssessmentId is not null)
+                        {
+                            <span> · sparad</span>
+                        }
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Utveckling">
+                    <div class="progress-buttons">
+                        @foreach (var value in ProgressText.All)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Color="@(context.Progress == value ? value.Color() : Color.Default)"
+                                       Variant="@(context.Progress == value ? Variant.Filled : Variant.Outlined)"
+                                       OnClick="@(() => Toggle(context, value))">
+                                @value.Label()
+                            </MudButton>
+                        }
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Betygssteg">
+                    <MudSelect T="string" @bind-Value="context.GradeStep" Variant="Variant.Text"
+                               Clearable="true" Dense="true" Disabled="@(context.Progress is null)">
+                        @foreach (var g in ProgressText.GradeSteps)
+                        {
+                            <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudTd>
+                <MudTd DataLabel="Kommentar">
+                    <MudTextField @bind-Value="context.Comment" Variant="Variant.Text"
+                                  Placeholder="Valfri" Disabled="@(context.Progress is null)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mt-4 page-head">
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            @_selected av @_rows.Count elever får en bedömning.
+            @if (_existing > 0)
+            {
+                <text> @_existing är sedan tidigare sparade och uppdateras.</text>
+            }
+            @if (_removed > 0)
+            {
+                <text> @_removed tas bort.</text>
+            }
+        </MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="SaveAsync" Disabled="@(_busy || (_selected == 0 && _removed == 0) || string.IsNullOrWhiteSpace(_subjectCode))">
+            @(_busy ? "Sparar…" : SaveLabel)
+        </MudButton>
+    </MudStack>
+
+    @if (string.IsNullOrWhiteSpace(_subjectCode) && _selected > 0)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Error" Class="d-block mt-2">
+            Välj ett ämne innan du sparar.
+        </MudText>
+    }
+</MudCard>
+
+@code {
+    /// <summary>En rad per elev. Progress = null betyder att eleven hoppas över.</summary>
+    private sealed class Row(StudentDto student)
+    {
+        public StudentDto Student { get; } = student;
+        public Progress? Progress { get; set; }
+        public string? GradeStep { get; set; }
+        public string? Comment { get; set; }
+
+        /// <summary>Satt när raden motsvarar en redan sparad bedömning för samma tillfälle.</summary>
+        public int? AssessmentId { get; set; }
+    }
+
+    private List<Row> _rows = [];
+    private IReadOnlyList<string> _classes = [];
+    private string? _className;
+    private string? _subjectCode;
+    private string? _subjectName;
+    private string? _workArea;
+    private string? _centralContent;
+    private string? _gradingCriterion;
+    private string? _suggestedGradeStep;
+    private DateTime? _date = DateTime.Today;
+    private bool _loading = true;
+    private bool _busy;
+    private int _syncToken;
+
+    /// <summary>Klassens årskurs — den vanligaste bland de visade eleverna.</summary>
+    private int? _schoolYear => _rows
+        .Select(r => r.Student.SchoolYear)
+        .Where(y => y is not null)
+        .GroupBy(y => y)
+        .OrderByDescending(g => g.Count())
+        .FirstOrDefault()?.Key;
+
+    private int _selected => _rows.Count(r => r.Progress is not null);
+
+    private int _existing => _rows.Count(r => r.Progress is not null && r.AssessmentId is not null);
+
+    /// <summary>Sparade rader som avmarkerats tas bort när man sparar.</summary>
+    private int _removed => _rows.Count(r => r.Progress is null && r.AssessmentId is not null);
+
+    private string SaveLabel => _selected > 0
+        ? $"Spara {_selected} bedömningar"
+        : $"Ta bort {_removed} bedömningar";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _classes = await Store.GetClassesAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var students = await Store.GetStudentsAsync(className: _className);
+        _rows = [.. students.Select(s => new Row(s))];
+        _loading = false;
+        await SyncExistingAsync();
+    }
+
+    /// <summary>
+    /// Hämtar bedömningar som redan finns för valt ämne, arbetsområde och datum och förifyller raderna,
+    /// så att ett nytt spar uppdaterar dem i stället för att skapa dubbletter.
+    /// </summary>
+    private async Task SyncExistingAsync()
+    {
+        // Ämne, arbetsområde och datum kan ändras tätt inpå varandra. Bara det senaste
+        // anropet får skriva till raderna, annars kan ett äldre svar nolla förifyllningen.
+        var token = ++_syncToken;
+
+        var subjectCode = _subjectCode;
+        var workArea = _workArea;
+        var date = DateOnly.FromDateTime(_date ?? DateTime.Today);
+
+        var existing = string.IsNullOrWhiteSpace(subjectCode)
+            ? []
+            : await Store.FindAssessmentsAsync(subjectCode, workArea, date);
+
+        if (token != _syncToken)
+        {
+            return;
+        }
+
+        var byStudent = existing.ToDictionary(a => a.StudentId);
+
+        foreach (var row in _rows)
+        {
+            if (byStudent.TryGetValue(row.Student.Id, out var a))
+            {
+                row.AssessmentId = a.Id;
+                row.Progress = a.Progress;
+                row.GradeStep = a.GradeStep;
+                row.Comment = a.Comment;
+            }
+            else if (row.AssessmentId is not null)
+            {
+                // Raden hörde till ett annat tillfälle och ska inte längre vara förifylld.
+                row.AssessmentId = null;
+                row.Progress = null;
+                row.GradeStep = null;
+                row.Comment = null;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    /// <summary>Kriteriets betygssteg förifylls på elever som redan är markerade.</summary>
+    private void OnGradeStepSuggested(string? step)
+    {
+        _suggestedGradeStep = step;
+
+        foreach (var row in _rows.Where(r => r.Progress is not null && r.GradeStep is null))
+        {
+            row.GradeStep = step;
+        }
+    }
+
+    private void Toggle(Row row, Progress value)
+    {
+        if (row.Progress == value)
+        {
+            row.Progress = null;
+            return;
+        }
+
+        row.Progress = value;
+        row.GradeStep ??= _suggestedGradeStep;
+    }
+
+    private void SetAll(Progress? value)
+    {
+        foreach (var row in _rows)
+        {
+            row.Progress = value;
+
+            if (value is null)
+            {
+                row.GradeStep = null;
+                row.Comment = null;
+            }
+            else
+            {
+                row.GradeStep ??= _suggestedGradeStep;
+            }
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        try
+        {
+            var date = DateOnly.FromDateTime(_date ?? DateTime.Today);
+
+            var items = _rows
+                .Where(r => r.Progress is not null)
+                .Select(r => (r.AssessmentId, new SaveAssessmentRequest(
+                    r.Student.Id, _subjectCode!, _subjectName ?? "", _workArea, _centralContent,
+                    _gradingCriterion, r.GradeStep, r.Progress!.Value, r.Comment, date)))
+                .ToArray();
+
+            var removed = _rows
+                .Where(r => r.Progress is null && r.AssessmentId is not null)
+                .Select(r => r.AssessmentId!.Value)
+                .ToArray();
+
+            var saved = await Store.SaveAssessmentsAsync(items);
+            await Store.DeleteAssessmentsAsync(removed);
+
+            Snackbar.Add(
+                removed.Length == 0
+                    ? $"Sparade {saved} bedömningar."
+                    : $"Sparade {saved} bedömningar och tog bort {removed.Length}.",
+                Severity.Success);
+
+            await SyncExistingAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Kunde inte spara: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

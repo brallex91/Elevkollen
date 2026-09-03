@@ -1,0 +1,63 @@
+name: Deploy till GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Pages-deployen behöver skrivrättigheter på sidan och ett id-token för verifiering.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# En deploy i taget. Pågående körningar avbryts inte, så en halvfärdig sida aldrig publiceras.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installera .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Återställ paket
+        run: dotnet restore Elevkollen.slnx
+
+      - name: Publicera
+        run: dotnet publish Elevkollen.csproj -c Release -o dist --no-restore
+
+      - name: Peka base href mot projektets underkatalog
+        # Appen ligger på https://<användare>.github.io/<repo>/, inte i roten.
+        run: |
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|g' dist/wwwroot/index.html
+
+      - name: Lägg till 404-fallback för djuplänkar
+        # Pages kan inte routa om okända sökvägar, så en kopia av index.html får
+        # klientroutern att ta hand om t.ex. /elever/3 vid direkt anrop.
+        run: cp dist/wwwroot/index.html dist/wwwroot/404.html
+
+      - name: Säkerställ att _framework inte filtreras bort av Jekyll
+        run: touch dist/wwwroot/.nojekyll
+
+      - name: Paketera artefakt
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicera till GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,72 @@
+@inject StudentStore Store
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_name" Label="Namn" Variant="Variant.Outlined"
+                      Required="true" AutoFocus="true" Class="mb-3" />
+        <MudTextField @bind-Value="_email" Label="E-post" Variant="Variant.Outlined" Class="mb-3" />
+        <MudTextField @bind-Value="_guardian" Label="Kontaktuppgifter vårdnadshavare"
+                      Variant="Variant.Outlined" Lines="2" Class="mb-3" />
+        <MudGrid Spacing="2">
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_schoolYear" Label="Årskurs" Variant="Variant.Outlined"
+                                 Min="1" Max="9" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_className" Label="Klass" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">Avbryt</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(string.IsNullOrWhiteSpace(_name) || _busy)" OnClick="SaveAsync">
+            Spara
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialog { get; set; } = default!;
+
+    /// <summary>Null = ny elev.</summary>
+    [Parameter] public StudentDto? Student { get; set; }
+
+    private string _name = "";
+    private string? _email;
+    private string? _guardian;
+    private int? _schoolYear;
+    private string? _className;
+    private bool _busy;
+
+    protected override void OnInitialized()
+    {
+        if (Student is { } s)
+        {
+            _name = s.Name;
+            _email = s.Email;
+            _guardian = s.GuardianContact;
+            _schoolYear = s.SchoolYear;
+            _className = s.ClassName;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        var request = new SaveStudentRequest(
+            _name.Trim(), _email, _guardian, _schoolYear, ClassLabel.Normalize(_className));
+
+        if (Student is null)
+        {
+            await Store.CreateStudentAsync(request);
+        }
+        else
+        {
+            await Store.UpdateStudentAsync(Student.Id, request);
+        }
+
+        Dialog.Close(DialogResult.Ok(true));
+    }
+}

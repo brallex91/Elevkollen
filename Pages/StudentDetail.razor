@@ -1,0 +1,256 @@
+@page "/elever/{Id:int}"
+@inject StudentStore Store
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>@(_student?.Name ?? "Elev")</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_student is null)
+{
+    <MudAlert Severity="Severity.Error">Eleven hittades inte.</MudAlert>
+}
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 page-head">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Nav.NavigateTo("/elever"))" />
+        <div class="page-head-title">
+            <MudText Typo="Typo.h5">@_student.Name</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @(string.Join(" · ", new[]
+                {
+                    ClassLabel.For(_student.SchoolYear, _student.ClassName),
+                    _student.Email,
+                }.Where(x => !string.IsNullOrWhiteSpace(x))))
+            </MudText>
+        </div>
+        <MudSpacer />
+        <div class="page-actions">
+            <MudButton StartIcon="@Icons.Material.Filled.Print" Variant="Variant.Outlined"
+                       OnClick="@(() => Nav.NavigateTo($"/elever/{Id}/rapport"))">
+                Rapport
+            </MudButton>
+            <MudButton StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Variant="Variant.Filled"
+                       OnClick="@(() => EditAsync(null))">
+                Ny bedömning
+            </MudButton>
+        </div>
+    </MudStack>
+
+    @if (!string.IsNullOrWhiteSpace(_student.GuardianContact))
+    {
+        <MudAlert Severity="Severity.Normal" Dense="true" Icon="@Icons.Material.Filled.ContactPhone" Class="mb-4">
+            @_student.GuardianContact
+        </MudAlert>
+    }
+
+    <MudTabs Elevation="0" Rounded="true" Class="mt-2">
+        <MudTabPanel Text="Bedömningar" Icon="@Icons.Material.Filled.FactCheck">
+            @if (_student.Assessments.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    Inga bedömningar än. Skapa den första med "Ny bedömning".
+                </MudAlert>
+            }
+            else
+            {
+                <MudTimeline TimelinePosition="TimelinePosition.Start">
+                    @foreach (var a in _student.Assessments)
+                    {
+                        <MudTimelineItem Color="@a.Progress.Color()" Size="Size.Small">
+                            <MudCard Elevation="1">
+                                <MudCardContent>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@a.SubjectName</MudChip>
+                                        @if (!string.IsNullOrWhiteSpace(a.GradeStep))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@a.GradeStep</MudChip>
+                                        }
+                                        <MudChip T="string" Size="Size.Small" Color="@a.Progress.Color()"
+                                                 Variant="Variant.Text">
+                                            @a.Progress.Label()
+                                        </MudChip>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                            @a.Date.ToString("yyyy-MM-dd")
+                                        </MudText>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                       OnClick="@(() => EditAsync(a))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                                       Color="Color.Error" OnClick="@(() => DeleteAsync(a))" />
+                                    </MudStack>
+
+                                    @if (!string.IsNullOrWhiteSpace(a.WorkArea))
+                                    {
+                                        <MudText Typo="Typo.subtitle2">@a.WorkArea</MudText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(a.CentralContent))
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mt-1">@a.CentralContent</MudText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(a.GradingCriterion))
+                                    {
+                                        <MudText Typo="Typo.caption" Class="mud-text-secondary d-block mt-2">
+                                            @a.GradingCriterion
+                                        </MudText>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(a.Comment))
+                                    {
+                                        <MudAlert Severity="Severity.Normal" Dense="true" Class="mt-3">@a.Comment</MudAlert>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudTimelineItem>
+                    }
+                </MudTimeline>
+            }
+        </MudTabPanel>
+
+        <MudTabPanel Text="Utveckling" Icon="@Icons.Material.Filled.Insights">
+            @if (_stats is null || _stats.Subjects.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    Statistik visas när eleven har minst en bedömning.
+                </MudAlert>
+            }
+            else
+            {
+                <MudGrid Spacing="3">
+                    @foreach (var s in _stats.Subjects)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard Elevation="1" Class="pa-4">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                                    <MudText Typo="Typo.subtitle1">@s.SubjectName</MudText>
+                                    <MudSpacer />
+                                    @if (!string.IsNullOrWhiteSpace(s.LatestGradeStep))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@s.LatestGradeStep</MudChip>
+                                    }
+                                </MudStack>
+
+                                <MudProgressLinear Color="Color.Success" Size="Size.Large" Rounded="true"
+                                                   Value="@(100.0 * s.Achieved / s.AssessmentCount)" Class="mb-2" />
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @s.Achieved uppnått · @s.InProgress pågående · @s.NotAchieved ej uppnått
+                                    (@s.AssessmentCount totalt)
+                                </MudText>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                <MudText Typo="Typo.subtitle1" Class="mt-8 mb-2">Utveckling över tid</MudText>
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudChart ChartType="ChartType.Line" ChartSeries="_series" ChartLabels="_labels"
+                              Width="100%" Height="320px" />
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        0 = ej uppnått, 1 = pågående, 2 = uppnått
+                    </MudText>
+                </MudPaper>
+            }
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private StudentDetailDto? _student;
+    private StudentStatsDto? _stats;
+    private List<ChartSeries<double>> _series = [];
+    private string[] _labels = [];
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _student = await Store.GetStudentAsync(Id);
+        _stats = await Store.GetStatsAsync(Id);
+        BuildChart();
+        _loading = false;
+    }
+
+    /// <summary>En linje per ämne, med utvecklingen (0-2) per bedömningsdatum.</summary>
+    private void BuildChart()
+    {
+        if (_stats is null || _stats.Timeline.Count == 0)
+        {
+            _series = [];
+            _labels = [];
+            return;
+        }
+
+        var dates = _stats.Timeline.Select(p => p.Date).Distinct().Order().ToArray();
+        _labels = [.. dates.Select(d => d.ToString("MM-dd"))];
+
+        // Tidslinjen kommer redan sorterad på datum, så varje serie byggs i ett svep:
+        // vi går framåt genom datumen och behåller det senast kända värdet.
+        _series = [.. _stats.Timeline
+            .GroupBy(p => p.SubjectName)
+            .Select(g =>
+            {
+                var points = g.ToArray();
+                var data = new double[dates.Length];
+                var latest = 0d;
+                var next = 0;
+
+                for (var i = 0; i < dates.Length; i++)
+                {
+                    while (next < points.Length && points[next].Date <= dates[i])
+                    {
+                        latest = (int)points[next].Progress;
+                        next++;
+                    }
+
+                    data[i] = latest;
+                }
+
+                return new ChartSeries<double>
+                {
+                    Name = g.Key,
+                    Data = new ChartData<double>(data),
+                };
+            })];
+    }
+
+    private async Task EditAsync(AssessmentDto? assessment)
+    {
+        var parameters = new DialogParameters<AssessmentDialog>
+        {
+            { x => x.StudentId, Id },
+            { x => x.SchoolYear, _student?.SchoolYear },
+            { x => x.Assessment, assessment },
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var title = assessment is null ? "Ny bedömning" : "Redigera bedömning";
+        var dialog = await Dialogs.ShowAsync<AssessmentDialog>(title, parameters, options);
+
+        if (!(await dialog.Result)!.Canceled)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(AssessmentDto assessment)
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            "Ta bort bedömning",
+            "Vill du ta bort den här bedömningen?",
+            yesText: "Ta bort", cancelText: "Avbryt");
+
+        if (confirmed == true)
+        {
+            await Store.DeleteAssessmentAsync(assessment.Id);
+            Snackbar.Add("Bedömningen togs bort.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+}

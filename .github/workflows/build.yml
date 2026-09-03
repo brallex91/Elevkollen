@@ -1,0 +1,23 @@
+name: Bygg
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installera .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Återställ paket
+        run: dotnet restore Elevkollen.slnx
+
+      - name: Bygg
+        run: dotnet build Elevkollen.slnx -c Release --no-restore

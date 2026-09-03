@@ -1,0 +1,250 @@
+@inject TourState Tour
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+@implements IDisposable
+
+@* Introduktionsguide vid första besöket. Texten är medvetet kort — bara de breda dragen. *@
+
+@if (_visible)
+{
+    @* En heltäckande, osynlig sköld låser appen medan guiden är igång. *@
+    <div class="tour-shield"></div>
+
+    @* Fyra paneler runt hålet: allt suddas utom det steget faktiskt handlar om. *@
+    @foreach (var panel in Panels())
+    {
+        <div class="tour-blur" style="@panel"></div>
+    }
+
+    @if (_hole is { } hole)
+    {
+        <div class="tour-hole" style="@HoleStyle(hole)"></div>
+    }
+
+    <div class="tour-card" style="@CardStyle()">
+        <MudPaper Elevation="8" Class="pa-6 pa-sm-8" Style="border-radius: 16px;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4">
+                <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                    <MudIcon Icon="@Current.Icon" />
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Steg @(_index + 1) av @Steps.Length
+                    </MudText>
+                    <MudText Typo="Typo.h6">@Current.Title</MudText>
+                </div>
+            </MudStack>
+
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6" Style="min-height: 72px;">
+                @Current.Body
+            </MudText>
+
+            <MudProgressLinear Color="Color.Primary" Rounded="true" Size="Size.Small"
+                               Value="@(100.0 * (_index + 1) / Steps.Length)" Class="mb-6" />
+
+            <MudCheckBox T="bool" @bind-Value="_never" Color="Color.Primary" Dense="true"
+                         Label="Visa inte igen" Class="mb-2" />
+
+            <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                <MudButton Variant="Variant.Text" OnClick="SkipAsync">Hoppa över</MudButton>
+                <MudSpacer />
+                @if (_index > 0)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="BackAsync">Tillbaka</MudButton>
+                }
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextAsync"
+                           EndIcon="@(IsLast ? Icons.Material.Filled.Check : Icons.Material.Filled.ArrowForward)">
+                    @(IsLast ? "Kom igång" : "Nästa")
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </div>
+}
+
+@code {
+    /// <summary>Target är CSS-selektorn för det som ska förbli skarpt under steget.</summary>
+    private sealed record Step(string Title, string Body, string Icon, string? Route, string? Target);
+
+    private sealed record Rect(
+        double Top, double Left, double Width, double Height,
+        double ViewportWidth, double ViewportHeight);
+
+    private const double Pad = 8;
+    private const double CardWidth = 460;
+    private const double Gap = 16;
+
+    private static readonly Step[] Steps =
+    [
+        new("Välkommen",
+            "Det här är ditt verktyg för elevdokumentation. Du lägger upp elever, dokumenterar "
+            + "bedömningar mot läroplanen och följer deras utveckling över tid.",
+            Icons.Material.Filled.WavingHand, "/", null),
+
+        new("Dina elever",
+            "Lägg till elever och sök eller filtrera på klass. Klicka på en elev för att se alla "
+            + "bedömningar på en tidslinje, tillsammans med statistik över utvecklingen.",
+            Icons.Material.Filled.Groups, "/elever", ".mud-main-content"),
+
+        new("Bedöm hela klassen",
+            "Välj ämne och arbetsområde en gång och sätt sedan nivå för alla elever i ett svep. "
+            + "Öppnar du samma ämne, område och datum igen kan du justera det du redan sparat.",
+            Icons.Material.Filled.FactCheck, "/klassbedomning", ".mud-main-content"),
+
+        new("Se helheten",
+            "Klassöversikten visar elever på raderna och arbetsområden på kolumnerna, färgade efter "
+            + "senaste resultat. Det syns direkt vem som behöver mer stöd.",
+            Icons.Material.Filled.GridView, "/klassoversikt", ".mud-main-content"),
+
+        new("Hitta rätt",
+            "Allt finns ett klick bort i menyn: översikt, elever, klassöversikt, klassbedömning "
+            + "och dina säkerhetskopior.",
+            Icons.Material.Filled.Menu, null, ".mud-drawer"),
+
+        new("Håll datan trygg",
+            "All elevdata stannar i den här webbläsaren och skickas aldrig någonstans. Det betyder "
+            + "också att den försvinner om du rensar webbläsaren — ta därför en krypterad "
+            + "säkerhetskopia med jämna mellanrum. Vi påminner dig.",
+            Icons.Material.Filled.Backup, "/sakerhetskopia", ".mud-main-content"),
+    ];
+
+    private bool _visible;
+    private bool _never = true;
+    private int _index;
+    private Rect? _hole;
+
+    private Step Current => Steps[_index];
+
+    private bool IsLast => _index == Steps.Length - 1;
+
+    protected override void OnInitialized()
+    {
+        Tour.Changed += OnChanged;
+        _visible = Tour.ShouldShow;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_visible)
+        {
+            await MeasureAsync();
+        }
+    }
+
+    private void OnChanged()
+    {
+        _visible = Tour.ShouldShow;
+        _index = 0;
+        _hole = null;
+        StateHasChanged();
+    }
+
+    /// <summary>Mäter det aktuella målet så att hålet hamnar rätt även efter navigering.</summary>
+    private async Task MeasureAsync()
+    {
+        Rect? rect = null;
+
+        if (Current.Target is { } target)
+        {
+            try
+            {
+                rect = await Js.InvokeAsync<Rect?>("tourRect", target);
+            }
+            catch (JSException)
+            {
+                // Saknas elementet suddar vi hela sidan i stället — guiden får aldrig krascha.
+            }
+        }
+
+        if (rect != _hole)
+        {
+            _hole = rect;
+            StateHasChanged();
+        }
+    }
+
+    private Task BackAsync() => GoToAsync(_index - 1);
+
+    private Task NextAsync() => IsLast ? FinishAsync() : GoToAsync(_index + 1);
+
+    private async Task GoToAsync(int index)
+    {
+        _index = index;
+        _hole = null;
+
+        // Visa sidan som steget handlar om, så guiden känns förankrad i appen.
+        if (Current.Route is { } route)
+        {
+            Nav.NavigateTo(route);
+        }
+
+        await Task.Yield();
+        await MeasureAsync();
+    }
+
+    private Task SkipAsync() => FinishAsync();
+
+    private async Task FinishAsync()
+    {
+        _visible = false;
+        _hole = null;
+        await Tour.CompleteAsync(_never);
+        Nav.NavigateTo("/");
+    }
+
+    /// <summary>Panelerna ovanför, under, till vänster och höger om hålet.</summary>
+    private IEnumerable<string> Panels()
+    {
+        if (_hole is not { } h)
+        {
+            yield return "inset: 0;";
+            yield break;
+        }
+
+        var top = Math.Max(0, h.Top - Pad);
+        var left = Math.Max(0, h.Left - Pad);
+        var right = h.Left + h.Width + Pad;
+        var bottom = h.Top + h.Height + Pad;
+
+        yield return $"top: 0; left: 0; right: 0; height: {top:0.##}px;";
+        yield return $"top: {bottom:0.##}px; left: 0; right: 0; bottom: 0;";
+        yield return $"top: {top:0.##}px; left: 0; width: {left:0.##}px; height: {bottom - top:0.##}px;";
+        yield return $"top: {top:0.##}px; left: {right:0.##}px; right: 0; height: {bottom - top:0.##}px;";
+    }
+
+    private static string HoleStyle(Rect h) =>
+        $"top: {h.Top - Pad:0.##}px; left: {h.Left - Pad:0.##}px; "
+        + $"width: {h.Width + (Pad * 2):0.##}px; height: {h.Height + (Pad * 2):0.##}px;";
+
+    /// <summary>Kortet läggs bredvid hålet när det får plats, annars centrerat över det.</summary>
+    private string CardStyle()
+    {
+        if (_hole is not { } h)
+        {
+            return "left: 50%; top: 50%; transform: translate(-50%, -50%);";
+        }
+
+        var left = h.Left - Pad - Gap - CardWidth;
+        var right = h.Left + h.Width + Pad + Gap;
+
+        // På smala skärmar finns aldrig plats vid sidan om — kortet centreras alltid där.
+        if (h.ViewportWidth < (CardWidth * 2) + (Gap * 3))
+        {
+            return "left: 50%; top: 50%; transform: translate(-50%, -50%);";
+        }
+
+        // Räcker marginalen på någon sida lägger vi kortet där, annars centrerat över hålet.
+        if (left >= Gap)
+        {
+            return $"left: {left:0.##}px; top: 50%; transform: translateY(-50%);";
+        }
+
+        if (right + CardWidth + Gap <= h.ViewportWidth)
+        {
+            return $"left: {right:0.##}px; top: 50%; transform: translateY(-50%);";
+        }
+
+        return "left: 50%; top: 50%; transform: translate(-50%, -50%);";
+    }
+
+    public void Dispose() => Tour.Changed -= OnChanged;
+}

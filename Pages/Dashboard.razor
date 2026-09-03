@@ -1,0 +1,248 @@
+@page "/"
+@inject StudentStore Store
+@inject NavigationManager Nav
+
+<PageTitle>Översikt</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-1 page-head">
+    <div class="page-head-title">
+        <MudText Typo="Typo.h5">Översikt</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            All data finns bara i den här webbläsaren.
+        </MudText>
+    </div>
+    <MudSpacer />
+    <div class="page-actions">
+        <MudButton StartIcon="@Icons.Material.Filled.FactCheck" Variant="Variant.Outlined"
+                   Color="Color.Primary" Href="/klassbedomning">
+            Bedöm klassen
+        </MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" Variant="Variant.Filled"
+                   Color="Color.Primary" Href="/elever">
+            Elever
+        </MudButton>
+    </div>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-6" />
+}
+else if (_data is not { StudentCount: > 0 })
+{
+    <MudPaper Elevation="0" Class="pa-12 mt-6 d-flex flex-column align-center">
+        <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Large" Class="mud-text-secondary mb-4" />
+        <MudText Typo="Typo.h6" Class="mb-2">Inga elever ännu</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">
+            Lägg till din första elev så fylls den här vyn med statistik.
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.PersonAdd" Href="/elever">
+            Kom igång
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mt-2">
+        @foreach (var (label, value, icon, color) in Kpis(_data))
+        {
+            <MudItem xs="6" md="3">
+                <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <MudAvatar Color="@color" Variant="Variant.Outlined">
+                            <MudIcon Icon="@icon" />
+                        </MudAvatar>
+                        <div>
+                            <MudText Typo="Typo.h5">@value</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@label</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        }
+
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                <MudText Typo="Typo.subtitle1" Class="mb-4">Fördelning</MudText>
+                @if (_data.AssessmentCount == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Inga bedömningar ännu.</MudText>
+                }
+                else
+                {
+                    @* En enkel donut i ren SVG — inga extra beroenden och full kontroll på färgerna. *@
+                    <div class="d-flex justify-center mb-6">
+                        <svg viewBox="0 0 42 42" width="200" height="200" role="img" aria-label="Fördelning">
+                            <circle cx="21" cy="21" r="15.915" fill="none"
+                                    stroke="var(--mud-palette-lines-default)" stroke-width="4" />
+                            @{
+                                var offset = 25.0;
+                            }
+                            @foreach (var (_, share, stroke) in Shares(_data))
+                            {
+                                <circle cx="21" cy="21" r="15.915" fill="none" stroke="@stroke" stroke-width="4"
+                                        stroke-dasharray="@($"{share:0.##} {100 - share:0.##}")"
+                                        stroke-dashoffset="@($"{offset:0.##}")" transform="rotate(-90 21 21)" />
+                                offset -= share;
+                            }
+                            <text x="21" y="20.5" text-anchor="middle" font-size="6"
+                                  fill="var(--mud-palette-text-primary)">@_data.AchievedShare.ToString("0")%</text>
+                            <text x="21" y="25" text-anchor="middle" font-size="2.6"
+                                  fill="var(--mud-palette-text-secondary)">uppnått</text>
+                        </svg>
+                    </div>
+                    <MudStack Spacing="2">
+                        @foreach (var (label, share, stroke) in Shares(_data))
+                        {
+                            <div>
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <span class="dash-dot" style="background: @stroke;"></span>
+                                    <MudText Typo="Typo.body2">@label</MudText>
+                                    <MudSpacer />
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">@share.ToString("0") %</MudText>
+                                </MudStack>
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                <MudText Typo="Typo.subtitle1" Class="mb-1">Uppnått per klass</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Andel bedömningar som är uppnådda.
+                </MudText>
+
+                @if (_data.Classes.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-4">
+                        Ange årskurs och klass på eleverna för att se den här jämförelsen.
+                    </MudText>
+                }
+                else
+                {
+                    <MudStack Spacing="3" Class="mt-4">
+                        @foreach (var c in _data.Classes)
+                        {
+                            <div>
+                                <MudStack Row="true" AlignItems="AlignItems.Center">
+                                    <MudText Typo="Typo.body2">@c.ClassName</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                        @c.StudentCount elever · @c.AssessmentCount bedömningar
+                                    </MudText>
+                                    <MudSpacer />
+                                    <MudText Typo="Typo.body2">@c.AchievedShare.ToString("0") %</MudText>
+                                </MudStack>
+                                <MudProgressLinear Color="Color.Success" Rounded="true"
+                                                   Size="Size.Small" Value="@c.AchievedShare" />
+                            </div>
+                        }
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                <MudText Typo="Typo.subtitle1" Class="mb-4">Mest bedömda ämnen</MudText>
+                @if (_data.Subjects.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Inga bedömningar ännu.</MudText>
+                }
+                else
+                {
+                    var max = _data.Subjects.Max(s => s.AssessmentCount);
+                    <div class="dash-bars">
+                        @foreach (var s in _data.Subjects)
+                        {
+                            <div class="dash-bar" title="@($"{s.SubjectName}: {s.AssessmentCount} bedömningar, {s.AchievedShare:0} % uppnått")">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@s.AssessmentCount</MudText>
+                                <div class="dash-bar-track">
+                                    <div class="dash-bar-fill" style="height: @($"{100.0 * s.AssessmentCount / max:0.##}")%;"></div>
+                                </div>
+                                <MudText Typo="Typo.caption" Class="dash-bar-label">@s.SubjectName</MudText>
+                            </div>
+                        }
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px; height: 100%;">
+                <MudText Typo="Typo.subtitle1" Class="mb-4">Senaste bedömningarna</MudText>
+                @if (_data.Recent.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Inga bedömningar ännu.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var r in _data.Recent)
+                        {
+                            <MudListItem T="string" Icon="@Icons.Material.Filled.Circle"
+                                         IconColor="@r.Progress.Color()"
+                                         OnClick="@(() => Nav.NavigateTo($"/elever/{r.StudentId}"))">
+                                <MudText Typo="Typo.body2">@r.StudentName</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                    @r.SubjectName@(string.IsNullOrWhiteSpace(r.WorkArea) ? "" : $" · {r.WorkArea}") · @r.Date.ToString("yyyy-MM-dd")
+                                </MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+
+        @if (_data.NeedsAttention.Count > 0)
+        {
+            <MudItem xs="12">
+                <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 12px;">
+                    <MudText Typo="Typo.subtitle1" Class="mb-1">Behöver mer stöd</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Elever med flest ej uppnådda bedömningar.
+                    </MudText>
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="mt-4">
+                        @foreach (var s in _data.NeedsAttention)
+                        {
+                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning"
+                                     OnClick="@(() => Nav.NavigateTo($"/elever/{s.StudentId}"))">
+                                @s.StudentName @(string.IsNullOrWhiteSpace(s.ClassName) ? "" : $"({s.ClassName})") · @s.NotAchieved av @s.Total
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private DashboardDto? _data;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _data = await Store.GetDashboardAsync();
+        _loading = false;
+    }
+
+    private static (string Label, string Value, string Icon, Color Color)[] Kpis(DashboardDto d) =>
+    [
+        ("Elever", d.StudentCount.ToString(), Icons.Material.Filled.Groups, Color.Primary),
+        ("Klasser", d.ClassCount.ToString(), Icons.Material.Filled.School, Color.Info),
+        ("Bedömningar", d.AssessmentCount.ToString(), Icons.Material.Filled.FactCheck, Color.Secondary),
+        ("Senaste 30 dagarna", d.AssessmentsLast30Days.ToString(), Icons.Material.Filled.TrendingUp, Color.Success),
+    ];
+
+    /// <summary>Färgerna hämtas från temat så att diagrammen följer ljust och mörkt läge.</summary>
+    private static (string Label, double Share, string Stroke)[] Shares(DashboardDto d) =>
+    [
+        (Progress.Achieved.Label(), d.AchievedShare, "var(--mud-palette-success)"),
+        (Progress.InProgress.Label(), d.InProgressShare, "var(--mud-palette-warning)"),
+        (Progress.NotAchieved.Label(), d.NotAchievedShare, "var(--mud-palette-error)"),
+    ];
+}

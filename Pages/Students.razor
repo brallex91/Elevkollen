@@ -1,0 +1,139 @@
+@page "/elever"
+@inject StudentStore Store
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Elever</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 page-head">
+    <MudText Typo="Typo.h5">Elever</MudText>
+    <MudSpacer />
+    <div class="page-actions">
+        <MudButton StartIcon="@Icons.Material.Filled.FactCheck" Color="Color.Primary"
+                   Variant="Variant.Outlined" Href="/klassbedomning">
+            Klassbedömning
+        </MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.PersonAdd" Color="Color.Primary"
+                   Variant="Variant.Filled" OnClick="@(() => EditAsync(null))">
+            Lägg till elev
+        </MudButton>
+    </div>
+</MudStack>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0">
+    <MudGrid Spacing="2" Class="align-center">
+        <MudItem xs="12" sm="7">
+            <MudTextField @bind-Value="_search" @bind-Value:after="LoadAsync" Label="Sök på namn eller e-post"
+                          Variant="Variant.Outlined" Adornment="Adornment.Start" DebounceInterval="300"
+                          AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudSelect T="string" @bind-Value="_className" @bind-Value:after="LoadAsync" Label="Klass"
+                       Variant="Variant.Outlined" Clearable="true">
+                @foreach (var c in _classes)
+                {
+                    <MudSelectItem T="string" Value="@c">@c</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_students.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+        Inga elever matchar. Lägg till en elev för att komma igång.
+    </MudAlert>
+}
+else
+{
+    <MudTable Items="_students" Hover="true" Elevation="0" Breakpoint="Breakpoint.Sm"
+              OnRowClick="@((TableRowClickEventArgs<StudentDto> e) => { if (e.Item is { } s) Open(s); })"
+              RowClass="cursor-pointer" T="StudentDto">
+        <HeaderContent>
+            <MudTh>Namn</MudTh>
+            <MudTh>Klass</MudTh>
+            <MudTh>Årskurs</MudTh>
+            <MudTh>Bedömningar</MudTh>
+            <MudTh>Senaste</MudTh>
+            <MudTh />
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Namn">
+                <MudText Typo="Typo.body1">@context.Name</MudText>
+                @if (!string.IsNullOrWhiteSpace(context.Email))
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Email</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Klass">@ClassLabel.For(context.SchoolYear, context.ClassName)</MudTd>
+            <MudTd DataLabel="Årskurs">@context.SchoolYear</MudTd>
+            <MudTd DataLabel="Bedömningar">
+                <MudChip T="string" Size="Size.Small" Color="@(context.AssessmentCount > 0 ? Color.Primary : Color.Default)">
+                    @context.AssessmentCount
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Senaste">@(context.LastAssessmentDate?.ToString("yyyy-MM-dd") ?? "–")</MudTd>
+            <MudTd>
+                <MudStack Row="true" Spacing="0" Justify="Justify.FlexEnd">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                   OnClick="@(() => EditAsync(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteAsync(context))" />
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private IReadOnlyList<StudentDto> _students = [];
+    private IReadOnlyList<string> _classes = [];
+    private string? _search;
+    private string? _className;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _students = await Store.GetStudentsAsync(_search, _className);
+        _classes = await Store.GetClassesAsync();
+        _loading = false;
+    }
+
+    private void Open(StudentDto student) => Nav.NavigateTo($"/elever/{student.Id}");
+
+    private async Task EditAsync(StudentDto? student)
+    {
+        var parameters = new DialogParameters<StudentDialog> { { x => x.Student, student } };
+        var title = student is null ? "Ny elev" : "Redigera elev";
+        var dialog = await Dialogs.ShowAsync<StudentDialog>(title, parameters);
+
+        if (!(await dialog.Result)!.Canceled)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(StudentDto student)
+    {
+        var confirmed = await Dialogs.ShowMessageBoxAsync(
+            "Ta bort elev",
+            $"Ta bort {student.Name} och alla bedömningar? Detta går inte att ångra.",
+            yesText: "Ta bort", cancelText: "Avbryt");
+
+        if (confirmed == true)
+        {
+            await Store.DeleteStudentAsync(student.Id);
+            Snackbar.Add($"{student.Name} togs bort.", Severity.Success);
+            await LoadAsync();
+        }
+    }
+}

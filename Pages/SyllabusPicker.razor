@@ -1,0 +1,246 @@
+@inject SyllabusClient Api
+
+@* Gemensam läroplansväljare: ämne, arbetsområde, centralt innehåll och betygskriterium.
+   Används både för enskild bedömning och för klassbedömning. *@
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" sm="@(ShowDate ? 6 : 12)">
+        <MudAutocomplete T="SubjectDto" Value="_subject" ValueChanged="SubjectChangedAsync"
+                         SearchFunc="SearchSubjectsAsync" ToStringFunc="@(s => s?.Name ?? "")"
+                         Label="Ämne" Variant="Variant.Outlined" Required="true"
+                         Clearable="true" ResetValueOnEmptyText="true" CoerceText="true"
+                         MaxItems="null" Placeholder="Sök ämne">
+            <ItemTemplate Context="s">
+                <MudText Typo="Typo.body2">@s.Name</MudText>
+            </ItemTemplate>
+        </MudAutocomplete>
+    </MudItem>
+
+    @if (ShowDate)
+    {
+        <MudItem xs="12" sm="6">
+            <MudDatePicker Date="Date" DateChanged="DateChanged" Label="Datum" Variant="Variant.Outlined" />
+        </MudItem>
+    }
+
+    <MudItem xs="12">
+        <MudTextField Value="WorkArea" ValueChanged="@((string? v) => WorkAreaChanged.InvokeAsync(v))"
+                      T="string" Label="Arbetsområde" Placeholder="t.ex. Bråk och procent"
+                      Variant="Variant.Outlined" Immediate="true" DebounceInterval="400" />
+    </MudItem>
+
+    @if (_loading)
+    {
+        <MudItem xs="12">
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        </MudItem>
+    }
+    else if (_syllabus is not null)
+    {
+        <MudItem xs="12" sm="4">
+            <MudSelect T="string" @bind-Value="_yearSpan" @bind-Value:after="YearSpanChangedAsync"
+                       Label="Årskursspann" Variant="Variant.Outlined">
+                @foreach (var y in _yearSpans)
+                {
+                    <MudSelectItem T="string" Value="@y">Årskurs @y</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="8">
+            <MudAutocomplete T="string" Value="CentralContent"
+                             ValueChanged="@((string? v) => CentralContentChanged.InvokeAsync(v))"
+                             SearchFunc="SearchContentAsync" Label="Centralt innehåll"
+                             Variant="Variant.Outlined" Clearable="true" ResetValueOnEmptyText="true"
+                             MaxItems="null" Placeholder="Sök i centralt innehåll">
+                <ItemTemplate Context="item">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@HeadingFor(item)</MudText>
+                    <MudText Typo="Typo.body2" Class="picker-item">@item</MudText>
+                </ItemTemplate>
+            </MudAutocomplete>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudAutocomplete T="string" Value="GradingCriterion" ValueChanged="CriterionChangedAsync"
+                             SearchFunc="SearchCriteriaAsync" Label="Betygskriterium"
+                             Variant="Variant.Outlined" Clearable="true" ResetValueOnEmptyText="true"
+                             MaxItems="null" Placeholder="Sök bland betygskriterier">
+                <ItemTemplate Context="text">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@LabelFor(text)</MudText>
+                    <MudText Typo="Typo.body2" Class="picker-item">@Truncate(text)</MudText>
+                </ItemTemplate>
+            </MudAutocomplete>
+        </MudItem>
+    }
+</MudGrid>
+
+@code {
+    [Parameter] public string? SubjectCode { get; set; }
+    [Parameter] public EventCallback<string?> SubjectCodeChanged { get; set; }
+
+    [Parameter] public string? SubjectName { get; set; }
+    [Parameter] public EventCallback<string?> SubjectNameChanged { get; set; }
+
+    [Parameter] public string? WorkArea { get; set; }
+    [Parameter] public EventCallback<string?> WorkAreaChanged { get; set; }
+
+    [Parameter] public string? CentralContent { get; set; }
+    [Parameter] public EventCallback<string?> CentralContentChanged { get; set; }
+
+    [Parameter] public string? GradingCriterion { get; set; }
+    [Parameter] public EventCallback<string?> GradingCriterionChanged { get; set; }
+
+    /// <summary>Betygssteget som hör till valt kriterium, så anroparen kan förifylla.</summary>
+    [Parameter] public EventCallback<string?> GradeStepSuggested { get; set; }
+
+    [Parameter] public DateTime? Date { get; set; }
+    [Parameter] public EventCallback<DateTime?> DateChanged { get; set; }
+
+    [Parameter] public bool ShowDate { get; set; } = true;
+
+    /// <summary>Elevens eller klassens årskurs. Styr vilket årskursspann som förifylls.</summary>
+    [Parameter] public int? SchoolYear { get; set; }
+
+    private IReadOnlyList<SubjectDto> _subjects = [];
+    private SubjectDto? _subject;
+    private SyllabusDto? _syllabus;
+    private string[] _yearSpans = [];
+    private string? _yearSpan;
+    private string? _subjectCode;
+    private int? _appliedSchoolYear;
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _subjects = await Api.GetSubjectsAsync();
+        _subjectCode = SubjectCode;
+        _subject = _subjects.FirstOrDefault(s => s.Code == _subjectCode);
+
+        if (!string.IsNullOrWhiteSpace(_subjectCode))
+        {
+            await LoadSyllabusAsync();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Klassen kan bytas medan komponenten lever. Följ med tills läraren väljer själv.
+        if (SchoolYear != _appliedSchoolYear)
+        {
+            _appliedSchoolYear = SchoolYear;
+            var span = SpanFor(SchoolYear);
+
+            if (span is not null && _yearSpans.Contains(span))
+            {
+                _yearSpan = span;
+            }
+        }
+    }
+
+    /// <summary>Årskurs 1–3, 4–6 respektive 7–9 mappas till Skolverkets spann.</summary>
+    private static string? SpanFor(int? year) => year switch
+    {
+        >= 1 and <= 3 => "1-3",
+        >= 4 and <= 6 => "4-6",
+        >= 7 and <= 9 => "7-9",
+        _ => null,
+    };
+
+    private Task<IEnumerable<SubjectDto>> SearchSubjectsAsync(string? text, CancellationToken _) =>
+        Task.FromResult(_subjects.Where(s =>
+            string.IsNullOrWhiteSpace(text) ||
+            s.Name.Contains(text, StringComparison.OrdinalIgnoreCase)));
+
+    private Task<IEnumerable<string>> SearchContentAsync(string? text, CancellationToken _)
+    {
+        var items = _syllabus?.CentralContents
+            .Where(c => c.YearSpan == _yearSpan)
+            .SelectMany(c => c.Items)
+            .Where(i => string.IsNullOrWhiteSpace(text) || i.Contains(text, StringComparison.OrdinalIgnoreCase))
+            ?? [];
+
+        return Task.FromResult(items);
+    }
+
+    /// <summary>Betygskriterier sätts vid slutet av varje spann: 1-3 → åk 3, 4-6 → åk 6, 7-9 → åk 9.</summary>
+    private static int? CriterionYearFor(string? span) => span switch
+    {
+        "1-3" => 3,
+        "4-6" => 6,
+        "7-9" => 9,
+        _ => null,
+    };
+
+    private Task<IEnumerable<string>> SearchCriteriaAsync(string? text, CancellationToken _)
+    {
+        var year = CriterionYearFor(_yearSpan);
+
+        var items = _syllabus?.GradingCriteria
+            .Where(c => year is null || c.Year == year)
+            .Where(c => string.IsNullOrWhiteSpace(text) || c.Text.Contains(text, StringComparison.OrdinalIgnoreCase))
+            .Select(c => c.Text)
+            ?? [];
+
+        return Task.FromResult(items);
+    }
+
+    /// <summary>Byter läraren spann gäller varken innnehållet eller kriteriet längre.</summary>
+    private async Task YearSpanChangedAsync()
+    {
+        await CentralContentChanged.InvokeAsync(null);
+        await GradingCriterionChanged.InvokeAsync(null);
+        StateHasChanged();
+    }
+
+    private string HeadingFor(string item) =>
+        _syllabus?.CentralContents.FirstOrDefault(c => c.YearSpan == _yearSpan && c.Items.Contains(item))?.Heading ?? "";
+
+    private string LabelFor(string text)
+    {
+        var c = _syllabus?.GradingCriteria.FirstOrDefault(x => x.Text == text);
+        return c is null ? "" : $"Årskurs {c.Year} · Betyg {c.GradeStep}";
+    }
+
+    private async Task SubjectChangedAsync(SubjectDto? subject)
+    {
+        _subject = subject;
+        _subjectCode = subject?.Code;
+        await SubjectCodeChanged.InvokeAsync(_subjectCode);
+        await SubjectNameChanged.InvokeAsync(subject?.Name);
+        await LoadSyllabusAsync();
+    }
+
+    private async Task LoadSyllabusAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_subjectCode))
+        {
+            _syllabus = null;
+            return;
+        }
+
+        _loading = true;
+        _syllabus = await Api.GetSyllabusAsync(_subjectCode);
+        _yearSpans = _syllabus?.CentralContents.Select(c => c.YearSpan).Distinct().ToArray() ?? [];
+
+        if (_yearSpan is null || !_yearSpans.Contains(_yearSpan))
+        {
+            _yearSpan = (SpanFor(SchoolYear) is { } s && _yearSpans.Contains(s) ? s : null)
+                ?? _yearSpans.FirstOrDefault();
+        }
+
+        _loading = false;
+    }
+
+    private async Task CriterionChangedAsync(string? text)
+    {
+        await GradingCriterionChanged.InvokeAsync(text);
+
+        var step = _syllabus?.GradingCriteria.FirstOrDefault(c => c.Text == text)?.GradeStep;
+        if (step is not null)
+        {
+            await GradeStepSuggested.InvokeAsync(step);
+        }
+    }
+
+    private static string Truncate(string text) =>
+        text.Length <= 110 ? text : text[..110] + "…";
+}

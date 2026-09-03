@@ -1,0 +1,153 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthState Auth
+@inject NavigationManager Nav
+@inject BackupService Backups
+@inject TourState Tour
+
+<MudThemeProvider Theme="AppTheme.Default" IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@if (!_ready)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (!Auth.IsLoggedIn)
+{
+    @* Inloggningssidan visas utan skal. *@
+    @Body
+}
+else
+{
+    <MudLayout>
+        <MudAppBar Elevation="1">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleDrawer" />
+            <MudText Typo="Typo.h6" Class="ml-3">Elevdokumentation</MudText>
+            <MudSpacer />
+            <MudTooltip Text="Visa introduktionsguiden">
+                <MudIconButton Icon="@Icons.Material.Filled.HelpOutline" Color="Color.Inherit" OnClick="RestartTourAsync" />
+            </MudTooltip>
+            <MudIconButton Icon="@DarkLightModeButtonIcon" Color="Color.Inherit" OnClick="ToggleDarkMode" />
+            <MudTooltip Text="Logga ut">
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Edge="Edge.End" OnClick="LogoutAsync" />
+            </MudTooltip>
+        </MudAppBar>
+        <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+            <NavMenu />
+        </MudDrawer>
+        <MudMainContent Class="pt-16 pa-4">
+            @if (_remind)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Class="mb-4 no-print"
+                          ShowCloseIcon="true" CloseIconClicked="@(() => _dismissed = true)">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                        <span>@ReminderText</span>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Inherit"
+                                   OnClick="@(() => Nav.NavigateTo("/sakerhetskopia"))">
+                            Ta en kopia
+                        </MudButton>
+                    </MudStack>
+                </MudAlert>
+            }
+            @Body
+        </MudMainContent>
+    </MudLayout>
+
+    <TourOverlay />
+}
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = true;
+    private bool _ready;
+    private bool _dismissed;
+    private int? _daysSinceExport;
+    private bool _hasData;
+
+    /// <summary>All data ligger i webbläsaren, så en gammal kopia är appens största risk.</summary>
+    private bool _remind => !_dismissed && _hasData
+        && (_daysSinceExport is null || _daysSinceExport > BackupService.ReminderAfterDays);
+
+    private string ReminderText => _daysSinceExport is null
+        ? "Du har aldrig tagit en säkerhetskopia. Elevdatan finns bara i den här webbläsaren."
+        : $"Det var {_daysSinceExport} dagar sedan du tog en säkerhetskopia.";
+
+    private string DarkLightModeButtonIcon => _isDarkMode
+        ? Icons.Material.Rounded.AutoMode
+        : Icons.Material.Outlined.DarkMode;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.Changed += OnAuthChanged;
+        await Auth.InitializeAsync();
+        _ready = true;
+        Redirect();
+        await CheckBackupAsync();
+
+        if (Auth.IsLoggedIn)
+        {
+            await Tour.InitializeAsync();
+        }
+    }
+
+    private Task RestartTourAsync() => Tour.RestartAsync();
+
+    private async Task CheckBackupAsync()
+    {
+        if (!Auth.IsLoggedIn)
+        {
+            return;
+        }
+
+        try
+        {
+            var (students, _) = await Backups.GetCountsAsync();
+            _hasData = students > 0;
+            _daysSinceExport = await Backups.DaysSinceExportAsync();
+        }
+        catch
+        {
+            // En påminnelse är aldrig viktig nog att blockera appen.
+            _hasData = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnAuthChanged()
+    {
+        Redirect();
+        StateHasChanged();
+        _ = CheckBackupAsync();
+        _ = Auth.IsLoggedIn ? Tour.InitializeAsync() : Task.CompletedTask;
+    }
+
+    /// <summary>Skickar till login när man är utloggad, och bort från login när man är inloggad.</summary>
+    private void Redirect()
+    {
+        var onLogin = Nav.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase);
+
+        if (!Auth.IsLoggedIn && !onLogin)
+        {
+            Nav.NavigateTo("/login");
+        }
+        else if (Auth.IsLoggedIn && onLogin)
+        {
+            Nav.NavigateTo("/");
+        }
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
+
+    private async Task LogoutAsync()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/login");
+    }
+
+    public void Dispose() => Auth.Changed -= OnAuthChanged;
+}

@@ -1,0 +1,63 @@
+@page "/login"
+@inject AuthState Auth
+@inject NavigationManager Nav
+
+<PageTitle>Logga in</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-16">
+    <MudPaper Class="pa-8" Elevation="2">
+        <MudText Typo="Typo.h5" GutterBottom="true">Elevdokumentation</MudText>
+        <MudText Typo="Typo.body2" Class="mb-6 mud-text-secondary">
+            Logga in för att fortsätta.
+        </MudText>
+
+        <MudForm @onkeyup="OnKeyUp">
+            <MudTextField @bind-Value="_username" Label="Användarnamn" Variant="Variant.Outlined"
+                          Class="mb-4" Immediate="true" AutoFocus="true" />
+            <MudTextField @bind-Value="_password" Label="Lösenord" Variant="Variant.Outlined"
+                          InputType="InputType.Password" Class="mb-4" Immediate="true" />
+
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_error</MudAlert>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       OnClick="LoginAsync" Disabled="_busy">
+                @(_busy ? "Loggar in..." : "Logga in")
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _username = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoginAsync();
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        if (await Auth.LoginAsync(_username, _password))
+        {
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            _error = "Fel användarnamn eller lösenord.";
+        }
+
+        _busy = false;
+    }
+}

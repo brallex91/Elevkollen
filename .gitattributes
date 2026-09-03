@@ -1,0 +1,31 @@
+# Normalisera radbrytningar i repot; checka ut med plattformens egna.
+* text=auto
+
+*.cs      text diff=csharp
+*.razor   text diff=html
+*.csproj  text eol=crlf
+*.slnx    text eol=crlf
+*.props   text eol=crlf
+*.targets text eol=crlf
+*.config  text eol=crlf
+
+*.js   text
+*.css  text
+*.html text
+*.json text
+*.md   text
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Binärt — får aldrig radbrytningsnormaliseras.
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.xlsx binary
+*.edok binary
+
+# Håll språkstatistiken på GitHub rättvisande.
+wwwroot/css/app.css linguist-detectable
+.github/** linguist-documentation

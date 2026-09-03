@@ -1,0 +1,107 @@
+@inject StudentStore Store
+
+<MudDialog>
+    <DialogContent>
+        <SyllabusPicker @bind-SubjectCode="_subjectCode"
+                        @bind-SubjectName="_subjectName"
+                        @bind-WorkArea="_workArea"
+                        @bind-CentralContent="_centralContent"
+                        @bind-GradingCriterion="_gradingCriterion"
+                        @bind-Date="_date"
+                        SchoolYear="SchoolYear"
+                        GradeStepSuggested="@(step => _gradeStep = step)" />
+
+        <MudGrid Spacing="3" Class="mt-1">
+            <MudItem xs="12" sm="6">
+                <MudSelect T="Progress" @bind-Value="_progress" Label="Elevens utveckling"
+                           Variant="Variant.Outlined">
+                    @foreach (var p in ProgressText.All)
+                    {
+                        <MudSelectItem T="Progress" Value="@p">@p.Label()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" @bind-Value="_gradeStep" Label="Betygssteg"
+                           Variant="Variant.Outlined" Clearable="true">
+                    @foreach (var g in ProgressText.GradeSteps)
+                    {
+                        <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_comment" Label="Kommentar" Lines="3" Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => Dialog.Cancel())">Avbryt</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(string.IsNullOrWhiteSpace(_subjectCode) || _busy)" OnClick="SaveAsync">
+            Spara
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialog { get; set; } = default!;
+
+    [Parameter] public int StudentId { get; set; }
+
+    /// <summary>Elevens årskurs, används för att förifylla årskursspannet.</summary>
+    [Parameter] public int? SchoolYear { get; set; }
+
+    /// <summary>Null = ny bedömning.</summary>
+    [Parameter] public AssessmentDto? Assessment { get; set; }
+
+    private string? _subjectCode;
+    private string? _subjectName;
+    private string? _workArea;
+    private string? _centralContent;
+    private string? _gradingCriterion;
+    private string? _gradeStep;
+    private string? _comment;
+    private Progress _progress = Progress.InProgress;
+    private DateTime? _date = DateTime.Today;
+    private bool _busy;
+
+    protected override void OnInitialized()
+    {
+        if (Assessment is { } a)
+        {
+            _subjectCode = a.SubjectCode;
+            _subjectName = a.SubjectName;
+            _workArea = a.WorkArea;
+            _centralContent = a.CentralContent;
+            _gradingCriterion = a.GradingCriterion;
+            _gradeStep = a.GradeStep;
+            _comment = a.Comment;
+            _progress = a.Progress;
+            _date = a.Date.ToDateTime(TimeOnly.MinValue);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+
+        var request = new SaveAssessmentRequest(
+            StudentId, _subjectCode!, _subjectName ?? "", _workArea, _centralContent,
+            _gradingCriterion, _gradeStep, _progress, _comment,
+            DateOnly.FromDateTime(_date ?? DateTime.Today));
+
+        if (Assessment is null)
+        {
+            await Store.CreateAssessmentAsync(request);
+        }
+        else
+        {
+            await Store.UpdateAssessmentAsync(Assessment.Id, request);
+        }
+
+        Dialog.Close(DialogResult.Ok(true));
+    }
+}

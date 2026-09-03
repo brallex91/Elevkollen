@@ -1,0 +1,188 @@
+@page "/elever/{Id:int}/rapport"
+@inject StudentStore Store
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+<PageTitle>@(_student is null ? "Rapport" : $"Rapport – {_student.Name}")</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_student is null)
+{
+    <MudAlert Severity="Severity.Error">Eleven hittades inte.</MudAlert>
+}
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="mb-4 no-print page-head">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                       OnClick="@(() => Nav.NavigateTo($"/elever/{Id}"))" />
+        <MudText Typo="Typo.h5">Rapport</MudText>
+        <MudSpacer />
+        <div class="page-actions align-center">
+            <MudSelect T="string" @bind-Value="_period" @bind-Value:after="Apply" Label="Period"
+                       Variant="Variant.Outlined" Dense="true" Class="report-period">
+                @foreach (var (key, label) in Periods)
+                {
+                    <MudSelectItem T="string" Value="@key">@label</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Print" OnClick="PrintAsync">
+                Skriv ut
+            </MudButton>
+        </div>
+    </MudStack>
+
+    <MudPaper Elevation="1" Class="pa-4 pa-sm-8 report-sheet">
+        <div class="report-head mb-6">
+            <div>
+                <MudText Typo="Typo.h5">@_student.Name</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    @ClassLabel.For(_student.SchoolYear, _student.ClassName)
+                </MudText>
+            </div>
+            <div class="report-head-meta">
+                <MudText Typo="Typo.subtitle2">Kunskapsuppföljning</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @PeriodLabel · utskriven @DateTime.Today.ToString("yyyy-MM-dd")
+                </MudText>
+            </div>
+        </div>
+
+        <MudDivider Class="mb-6" />
+
+        @if (_groups.Length == 0)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Inga bedömningar i vald period.
+            </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Sammanfattning</MudText>
+            <div class="report-table-wrap mb-8">
+                <MudSimpleTable Dense="true" Bordered="true" Elevation="0" Class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Ämne</th>
+                            <th class="num">Uppnått</th>
+                            <th class="num">Pågående</th>
+                            <th class="num">Ej uppnått</th>
+                            <th class="num">Betygssteg</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in _groups)
+                        {
+                            <tr>
+                                <td data-label="Ämne">@g.SubjectName</td>
+                                <td data-label="Uppnått" class="num">@g.Items.Count(a => a.Progress == Progress.Achieved)</td>
+                                <td data-label="Pågående" class="num">@g.Items.Count(a => a.Progress == Progress.InProgress)</td>
+                                <td data-label="Ej uppnått" class="num">@g.Items.Count(a => a.Progress == Progress.NotAchieved)</td>
+                                <td data-label="Betygssteg" class="num">@(g.LatestGradeStep ?? "–")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </div>
+
+            @foreach (var g in _groups)
+            {
+                <div class="report-section mb-8">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">@g.SubjectName</MudText>
+                    <div class="report-table-wrap">
+                        <MudSimpleTable Dense="true" Bordered="true" Elevation="0" Class="report-table detail">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Arbetsområde</th>
+                                    <th>Utveckling</th>
+                                    <th class="num">Steg</th>
+                                    <th>Kommentar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in g.Items)
+                                {
+                                    <tr>
+                                        <td data-label="Datum" class="nowrap">@a.Date.ToString("yyyy-MM-dd")</td>
+                                        <td data-label="Arbetsområde">
+                                            @(a.WorkArea ?? "–")
+                                            @if (!string.IsNullOrWhiteSpace(a.CentralContent))
+                                            {
+                                                <div class="report-muted">@a.CentralContent</div>
+                                            }
+                                        </td>
+                                        <td data-label="Utveckling" class="nowrap">@a.Progress.Label()</td>
+                                        <td data-label="Steg" class="num">@(a.GradeStep ?? "–")</td>
+                                        <td data-label="Kommentar">@(a.Comment ?? "")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </div>
+                </div>
+            }
+
+            <MudDivider Class="my-6" />
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Underlaget är sammanställt från lärarens dokumentation och är inte ett formellt betyg.
+            </MudText>
+        }
+    </MudPaper>
+}
+
+@code {
+    private static readonly (string Key, string Label)[] Periods =
+    [
+        ("all", "Alla bedömningar"),
+        ("term", "Innevarande termin"),
+        ("year", "Senaste 12 månaderna"),
+    ];
+
+    [Parameter] public int Id { get; set; }
+
+    private sealed record Group(string SubjectName, AssessmentDto[] Items, string? LatestGradeStep);
+
+    private StudentDetailDto? _student;
+    private Group[] _groups = [];
+    private string _period = "all";
+    private bool _loading = true;
+
+    private string PeriodLabel => Periods.First(p => p.Key == _period).Label;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _student = await Store.GetStudentAsync(Id);
+        Apply();
+        _loading = false;
+    }
+
+    private void Apply()
+    {
+        var from = _period switch
+        {
+            "term" => TermStart(DateOnly.FromDateTime(DateTime.Today)),
+            "year" => DateOnly.FromDateTime(DateTime.Today.AddYears(-1)),
+            _ => DateOnly.MinValue,
+        };
+
+        _groups = [.. (_student?.Assessments ?? [])
+            .Where(a => a.Date >= from)
+            .GroupBy(a => a.SubjectName)
+            .Select(g => new Group(
+                g.Key,
+                [.. g.OrderBy(a => a.Date)],
+                g.OrderByDescending(a => a.Date).FirstOrDefault(a => a.GradeStep is not null)?.GradeStep))
+            .OrderBy(g => g.SubjectName, StringComparer.CurrentCulture)];
+    }
+
+    /// <summary>Höstterminen börjar i juli, vårterminen i januari.</summary>
+    private static DateOnly TermStart(DateOnly today) =>
+        new(today.Year, today.Month >= 7 ? 7 : 1, 1);
+
+    private async Task PrintAsync() => await Js.InvokeVoidAsync("appPrint");
+}

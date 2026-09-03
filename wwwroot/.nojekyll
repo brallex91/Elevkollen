@@ -1,0 +1,2 @@
+# Utan den här filen ignorerar GitHub Pages mappar som börjar med understreck,
+# vilket skulle göra att _framework/ (hela Blazor-runtimen) aldrig serveras.

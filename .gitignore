@@ -1,0 +1,67 @@
+## Byggresultat
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+dist/
+publish/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.VisualState.xml
+*.psess
+*.vsp
+*.vspx
+
+## Rider / VS Code
+.idea/
+*.sln.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+## Testresultat
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.coveragexml
+
+## Operativsystem
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## Hemligheter — får aldrig checkas in
+*.pfx
+*.snk
+appsettings.*.local.json
+secrets.json
+.env
+.env.*
+
+## Säkerhetskopior från appen — innehåller elevdata
+*.edok
