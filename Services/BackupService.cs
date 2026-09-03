@@ -45,7 +45,7 @@ public sealed class BackupService(IJSRuntime js) : IAsyncDisposable
         var crypto = await CryptoAsync();
 
         var json = await db.InvokeAsync<string>("exportAll");
-        var fileName = $"elevdokumentation-{DateTime.Now:yyyy-MM-dd}.edok";
+        var fileName = $"elevkollen-{DateTime.Now:yyyy-MM-dd}.edok";
 
         await crypto.InvokeVoidAsync("exportEncrypted", json, password, fileName);
         await db.InvokeVoidAsync("setMeta", LastExportKey, DateTime.Today.ToString("O"));

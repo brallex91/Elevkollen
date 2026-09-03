@@ -93,6 +93,30 @@
         height: 2.5rem;
     }
 
+/* Loggan på inloggningssidan — samma märke som boot-skärmen, i mindre format. */
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.login-mark {
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: #fff;
+    background: linear-gradient(135deg, #5FBFAC 0%, #3FA894 100%);
+    box-shadow: 0 8px 20px rgba(63, 168, 148, 0.35);
+}
+
+    .login-mark svg {
+        width: 1.6rem;
+        height: 1.6rem;
+    }
+
 .boot-title {
     font-size: 1.25rem;
     font-weight: 500;
