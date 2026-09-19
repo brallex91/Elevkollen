@@ -303,6 +303,64 @@ html, body {
     white-space: normal;
 }
 
+/* Kriterietexter är långa. Listan får radbryta och bli hög i stället för att kapas. */
+.criterion-popover .mud-list-item {
+    align-items: flex-start;
+    white-space: normal;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.criterion-popover .mud-list-item-text {
+    white-space: normal;
+}
+
+/* Valt kriterium visas i sin helhet, eftersom inmatningsfältet bara rymmer en rad. */
+.criterion-panel {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+    background-color: var(--mud-palette-background-gray);
+}
+
+/* Värdeorden är det enda som skiljer betygsstegen åt, därför fetmarkeras de som i LGR. */
+.value-word {
+    font-weight: 700;
+    color: var(--mud-palette-text-primary);
+}
+
+/* Varje kriterium under ett arbetsområde är ett eget kort. */
+.criterion-card {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-borderradius);
+}
+
+    /* Panelen ligger inuti kortet och behöver därför en egen avgränsning. */
+    .criterion-card .criterion-panel {
+        background-color: var(--mud-palette-background);
+    }
+
+.criterion-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Betygsvalen blir egna rader med tydlig träffyta i stället för hoptryckta bredvid varandra. */
+.criterion-step {
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--mud-default-borderradius);
+}
+
+    .criterion-step:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .criterion-step .mud-radio-content {
+        margin-top: 0.15rem;
+    }
+
 /* Sidhuvuden: titel och knappar bryter till egna rader i stället för att klämmas ihop. */
 .page-head {
     row-gap: 0.75rem;

@@ -1,0 +1,28 @@
+@* Kriterietext där värdeorden är fetmarkerade, precis som i LGR. *@
+
+@if (Criterion is { } c)
+{
+    @foreach (var s in c.Segments)
+    {
+        if (s.IsValueWord)
+        {
+            <strong class="value-word">@s.Text</strong>
+        }
+        else
+        {
+            @s.Text
+        }
+    }
+}
+else
+{
+    @Fallback
+}
+
+@code {
+    /// <summary>Kriteriet vars text ska visas. Null innan ett betygssteg valts.</summary>
+    [Parameter] public CriterionDto? Criterion { get; set; }
+
+    /// <summary>Text att visa när inget betygssteg valts ännu.</summary>
+    [Parameter] public string? Fallback { get; set; }
+}

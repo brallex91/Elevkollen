@@ -17,6 +17,8 @@
     <None Include=".github\copilot-instructions.md" />
     <None Include=".github\workflows\build.yml" />
     <None Include=".github\workflows\deploy.yml" />
+    <None Include="_verify\_verify.csproj" />
+    <None Include="_vwtest\_vwtest.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,19 +31,21 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.*" />
     <PackageReference Include="MudBlazor" Version="9.*" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="_diag\" />
+  </ItemGroup>
   <!--
     Versionsstämpeln i footern. Patch-siffran är antalet commits och suffixet är
     kortaste hash, så varje commit ger en unik version utan manuell bokföring.
     Saknas git (t.ex. i en nedladdad zip) behålls <Version> ovan.
   -->
   <Target Name="SetVersionFromGit" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo">
-    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
-          ContinueOnError="true" IgnoreExitCode="true">
+    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="true" IgnoreExitCode="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitCount" />
       <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
     </Exec>
-    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low"
-          ContinueOnError="true" IgnoreExitCode="true">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="true" IgnoreExitCode="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash" />
     </Exec>
 

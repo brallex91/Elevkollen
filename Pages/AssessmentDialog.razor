@@ -5,41 +5,31 @@
         <SyllabusPicker @bind-SubjectCode="_subjectCode"
                         @bind-SubjectName="_subjectName"
                         @bind-WorkArea="_workArea"
-                        @bind-CentralContent="_centralContent"
-                        @bind-GradingCriterion="_gradingCriterion"
                         @bind-Date="_date"
                         SchoolYear="SchoolYear"
-                        GradeStepSuggested="@(step => _gradeStep = step)" />
+                        ShowCriterion="false"
+                        SyllabusChanged="OnSyllabusChanged" />
 
-        <MudGrid Spacing="3" Class="mt-1">
-            <MudItem xs="12" sm="6">
-                <MudSelect T="Progress" @bind-Value="_progress" Label="Elevens utveckling"
-                           Variant="Variant.Outlined">
-                    @foreach (var p in ProgressText.All)
-                    {
-                        <MudSelectItem T="Progress" Value="@p">@p.Label()</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudSelect T="string" @bind-Value="_gradeStep" Label="Betygssteg"
-                           Variant="Variant.Outlined" Clearable="true">
-                    @foreach (var g in ProgressText.GradeSteps)
-                    {
-                        <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+        @if (_syllabus is not null)
+        {
+            <MudDivider Class="my-4" />
 
-            <MudItem xs="12">
-                <MudTextField @bind-Value="_comment" Label="Kommentar" Lines="3" Variant="Variant.Outlined" />
-            </MudItem>
-        </MudGrid>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.subtitle1" Class="flex-grow-1">
+                    @(string.IsNullOrWhiteSpace(_workArea) ? "Betygskriterier" : _workArea)
+                </MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @_rows.Count @(_rows.Count == 1 ? "kriterium" : "kriterier")
+                </MudText>
+            </MudStack>
+
+            <CriterionRows Rows="_rows" Syllabus="_syllabus" YearSpan="_yearSpan" />
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="@(() => Dialog.Cancel())">Avbryt</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled"
-                   Disabled="@(string.IsNullOrWhiteSpace(_subjectCode) || _busy)" OnClick="SaveAsync">
+                   Disabled="@(!CanSave)" OnClick="SaveAsync">
             Spara
         </MudButton>
     </DialogActions>
@@ -60,13 +50,19 @@
     private string? _subjectCode;
     private string? _subjectName;
     private string? _workArea;
-    private string? _centralContent;
-    private string? _gradingCriterion;
-    private string? _gradeStep;
-    private string? _comment;
-    private Progress _progress = Progress.InProgress;
     private DateTime? _date = DateTime.Today;
+    private SyllabusDto? _syllabus;
+    private string? _yearSpan;
     private bool _busy;
+    private bool _restored;
+
+    private readonly List<CriterionRows.CriterionRow> _rows = [new()];
+
+    /// <summary>Minst en ifylld rad krävs, och ämnet måste vara valt.</summary>
+    private bool CanSave =>
+        !_busy
+        && !string.IsNullOrWhiteSpace(_subjectCode)
+        && _rows.Any(r => r.IsComplete);
 
     protected override void OnInitialized()
     {
@@ -75,32 +71,62 @@
             _subjectCode = a.SubjectCode;
             _subjectName = a.SubjectName;
             _workArea = a.WorkArea;
-            _centralContent = a.CentralContent;
-            _gradingCriterion = a.GradingCriterion;
-            _gradeStep = a.GradeStep;
-            _comment = a.Comment;
-            _progress = a.Progress;
             _date = a.Date.ToDateTime(TimeOnly.MinValue);
+
+            _rows[0].Id = a.Id;
+            _rows[0].CentralContent = a.CentralContent;
+            _rows[0].GradeStep = a.GradeStep;
+            _rows[0].Comment = a.Comment;
         }
+    }
+
+    private void OnSyllabusChanged((SyllabusDto? Syllabus, string? YearSpan) e)
+    {
+        _syllabus = e.Syllabus;
+        _yearSpan = e.YearSpan;
+
+        RestoreExistingCriterion();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Vid redigering är bara kriterietexten sparad. Kriteriet återfinns i läroplanen
+    /// via årskurs och styckeindex, så betygsvalet kan visas som vid nyskapande.
+    /// </summary>
+    private void RestoreExistingCriterion()
+    {
+        if (_restored || _syllabus is null || Assessment is not { } a)
+        {
+            return;
+        }
+
+        _restored = true;
+
+        var choices = CriterionGroup.Build(_syllabus.GradingCriteria);
+
+        _rows[0].Choice = (a.CriterionYear, a.CriterionIndex) switch
+        {
+            (int y, int i) => choices.FirstOrDefault(c => c.Year == y && c.Index == i),
+            _ => choices.FirstOrDefault(c => c.Variants.Any(v => v.Text == a.GradingCriterion)),
+        };
     }
 
     private async Task SaveAsync()
     {
         _busy = true;
 
-        var request = new SaveAssessmentRequest(
-            StudentId, _subjectCode!, _subjectName ?? "", _workArea, _centralContent,
-            _gradingCriterion, _gradeStep, _progress, _comment,
-            DateOnly.FromDateTime(_date ?? DateTime.Today));
+        var date = DateOnly.FromDateTime(_date ?? DateTime.Today);
 
-        if (Assessment is null)
-        {
-            await Store.CreateAssessmentAsync(request);
-        }
-        else
-        {
-            await Store.UpdateAssessmentAsync(Assessment.Id, request);
-        }
+        // Varje kriterium sparas som en egen bedömning, så statistiken blir individuell.
+        var items = _rows
+            .Where(r => r.IsComplete)
+            .Select(r => (r.Id, new SaveAssessmentRequest(
+                StudentId, _subjectCode!, _subjectName ?? "", _workArea, r.CentralContent,
+                r.CriterionText, r.GradeStep, ProgressText.ProgressFor(r.GradeStep), r.Comment,
+                date, r.Choice?.Year, r.Choice?.Index)))
+            .ToArray();
+
+        await Store.SaveAssessmentsAsync(items);
 
         Dialog.Close(DialogResult.Ok(true));
     }

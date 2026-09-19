@@ -14,6 +14,25 @@ public static class ProgressText
     /// <summary>Betygsstegen läraren kan välja mellan i UI.</summary>
     public static readonly string[] GradeSteps = ["A", "B", "C", "D", "E", "F"];
 
+    /// <summary>Betygssteget för en prestation som inte når kriteriet.</summary>
+    public const string NotPassedStep = "F";
+
+    /// <summary>
+    /// Utvecklingen följer av betygssteget: F betyder att kriteriet inte är uppnått,
+    /// övriga steg att det är uppnått. Tomt steg (årskurs 1 och 3) innebär
+    /// godtagbara kunskaper, vilket också räknas som uppnått.
+    /// </summary>
+    public static Progress ProgressFor(string? gradeStep) =>
+        gradeStep == NotPassedStep ? Progress.NotAchieved : Progress.Achieved;
+
+    /// <summary>Etikett för ett betygssteg, inklusive de steg som saknar bokstav.</summary>
+    public static string StepLabel(string? gradeStep) => gradeStep switch
+    {
+        NotPassedStep => "Ej godkänd",
+        null or "" => "Godtagbara kunskaper",
+        _ => $"Betyg {gradeStep}",
+    };
+
     /// <summary>Utvecklingsalternativen i den ordning de visas för läraren.</summary>
     public static readonly Progress[] All =
         [Progress.NotAchieved, Progress.InProgress, Progress.Achieved];
@@ -111,7 +130,9 @@ public sealed record AssessmentDto(
     string? GradeStep,
     Progress Progress,
     string? Comment,
-    DateOnly Date);
+    DateOnly Date,
+    int? CriterionYear = null,
+    int? CriterionIndex = null);
 
 public sealed record SaveAssessmentRequest(
     int StudentId,
@@ -123,7 +144,9 @@ public sealed record SaveAssessmentRequest(
     string? GradeStep,
     Progress Progress,
     string? Comment,
-    DateOnly Date);
+    DateOnly Date,
+    int? CriterionYear = null,
+    int? CriterionIndex = null);
 
 // ---------- Statistik ----------
 
@@ -228,7 +251,7 @@ public sealed record SyllabusDto(
     string Code,
     string Name,
     IReadOnlyList<CentralContentGroupDto> CentralContents,
-    IReadOnlyList<GradingCriterionDto> GradingCriteria);
+    IReadOnlyList<CriterionDto> GradingCriteria);
 
 /// <summary>Punkter under en h4-rubrik, för en årskursspann (t.ex. "4-6").</summary>
 public sealed record CentralContentGroupDto(
@@ -236,10 +259,156 @@ public sealed record CentralContentGroupDto(
     string Heading,
     IReadOnlyList<string> Items);
 
-public sealed record GradingCriterionDto(
+/// <summary>
+/// Ett enskilt kriterium, dvs. ett stycke ur Skolverkets betygskriterier.
+/// Identifieras av årskurs + styckeindex, inte av betygssteg, eftersom samma
+/// stycke återkommer i varje betygssteg med bara värdeorden utbytta.
+/// </summary>
+public sealed record CriterionDto(
     int Year,
+    int Index,
     string GradeStep,
-    string Text);
+    string Text,
+    IReadOnlyList<string> ValueWords)
+{
+    /// <summary>
+    /// Texten uppdelad så att värdeorden kan fetmarkeras i UI, precis som i LGR.
+    /// Beräknas vid anrop eftersom den bara behövs för det kriterium som visas.
+    /// </summary>
+    public IReadOnlyList<TextSegment> Segments => TextSegment.Highlight(Text, ValueWords);
+}
+
+/// <summary>
+/// En bit text som antingen är ett värdeord eller vanlig löptext.
+/// Låter UI:t rendera fetstil utan att gå via HTML.
+/// </summary>
+public sealed record TextSegment(string Text, bool IsValueWord)
+{
+    /// <summary>
+    /// Delar texten vid varje förekomst av ett värdeord. Längsta ordet matchas
+    /// först, så att "väl fungerande" inte delas av kortare "fungerande".
+    /// Hittas inget värdeord returneras texten som ett enda vanligt segment.
+    /// </summary>
+    public static IReadOnlyList<TextSegment> Highlight(string? text, IReadOnlyList<string>? valueWords)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
+
+        var words = (valueWords ?? [])
+            .Where(w => !string.IsNullOrWhiteSpace(w))
+            .OrderByDescending(w => w.Length)
+            .ToList();
+
+        if (words.Count == 0)
+        {
+            return [new TextSegment(text, false)];
+        }
+
+        var segments = new List<TextSegment>();
+        var plain = 0;
+        var i = 0;
+
+        while (i < text.Length)
+        {
+            var hit = words.FirstOrDefault(w =>
+                string.Compare(text, i, w, 0, w.Length, StringComparison.CurrentCultureIgnoreCase) == 0);
+
+            if (hit is null)
+            {
+                i++;
+                continue;
+            }
+
+            if (i > plain)
+            {
+                segments.Add(new TextSegment(text[plain..i], false));
+            }
+
+            // Behåll originalets skiftläge i stället för värdeordets.
+            segments.Add(new TextSegment(text.Substring(i, hit.Length), true));
+
+            i += hit.Length;
+            plain = i;
+        }
+
+        if (plain < text.Length)
+        {
+            segments.Add(new TextSegment(text[plain..], false));
+        }
+
+        return segments;
+    }
+}
+
+/// <summary>
+/// Ett kriterium med sina varianter per betygssteg. Läraren väljer först kriteriet
+/// och sedan vilket betygssteg elevens prestation motsvarar.
+/// </summary>
+public sealed record CriterionChoiceDto(
+    int Year,
+    int Index,
+    string Text,
+    IReadOnlyList<CriterionDto> Variants)
+{
+    /// <summary>Visningsetikett, t.ex. "Årskurs 6 · Kriterium 3".</summary>
+    public string Label => $"Årskurs {Year} · Kriterium {Index + 1}";
+}
+
+/// <summary>
+/// Grupperar kriterier per årskurs och styckeindex.
+///
+/// Skolverket skriver samma antal stycken för varje betygssteg, så stycke n
+/// beskriver samma förmåga i E, C och A. Skulle en framtida läroplan bryta den
+/// parallelliteten faller vi tillbaka på att låta varje betygssteg bli ett eget
+/// val, så att inget innehåll tappas bort eller paras ihop felaktigt.
+/// </summary>
+public static class CriterionGroup
+{
+    public static IReadOnlyList<CriterionChoiceDto> Build(IEnumerable<CriterionDto> criteria)
+    {
+        var choices = new List<CriterionChoiceDto>();
+
+        foreach (var byYear in criteria.GroupBy(c => c.Year).OrderBy(g => g.Key))
+        {
+            var bySteps = byYear.GroupBy(c => c.GradeStep).ToList();
+            var parallel = bySteps.Select(g => g.Count()).Distinct().Count() == 1;
+
+            if (parallel)
+            {
+                foreach (var byIndex in byYear.GroupBy(c => c.Index).OrderBy(g => g.Key))
+                {
+                    var variants = byIndex.OrderBy(c => StepOrder(c.GradeStep)).ToList();
+
+                    // E-varianten är den mest neutrala formuleringen och används som bastext.
+                    var baseText = variants[0].Text;
+
+                    choices.Add(new CriterionChoiceDto(byYear.Key, byIndex.Key, baseText, variants));
+                }
+            }
+            else
+            {
+                foreach (var c in byYear.OrderBy(c => StepOrder(c.GradeStep)).ThenBy(c => c.Index))
+                {
+                    choices.Add(new CriterionChoiceDto(c.Year, c.Index, c.Text, [c]));
+                }
+            }
+        }
+
+        return choices;
+    }
+
+    /// <summary>E först, sedan C, sedan A. Tomt steg (årskurs 1/3) hamnar först.</summary>
+    private static int StepOrder(string step) => step switch
+    {
+        "" => 0,
+        "E" => 1,
+        "C" => 2,
+        "A" => 3,
+        _ => 4
+    };
+}
 
 // ---------- Täckningsgrad ----------
 

@@ -398,11 +398,13 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
 
     private static AssessmentDto ToDto(AssessmentRecord a) => new(
         a.Id ?? 0, a.StudentId, a.SubjectCode, a.SubjectName, a.WorkArea, a.CentralContent,
-        a.GradingCriterion, a.GradeStep, a.Progress, a.Comment, a.Date);
+        a.GradingCriterion, a.GradeStep, a.Progress, a.Comment, a.Date,
+        a.CriterionYear, a.CriterionIndex);
 
     private static AssessmentRecord FromRequest(int? id, SaveAssessmentRequest r) => new(
         id, r.StudentId, r.SubjectCode, r.SubjectName, r.WorkArea, r.CentralContent,
-        r.GradingCriterion, r.GradeStep, r.Progress, r.Comment, r.Date);
+        r.GradingCriterion, r.GradeStep, r.Progress, r.Comment, r.Date,
+        r.CriterionYear, r.CriterionIndex);
 
     /// <summary>Id är null vid nyskapande så att IndexedDB tilldelar nyckeln.</summary>
     private sealed record StudentRecord(
@@ -424,5 +426,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
         string? GradeStep,
         Progress Progress,
         string? Comment,
-        DateOnly Date);
+        DateOnly Date,
+        int? CriterionYear = null,
+        int? CriterionIndex = null);
 }

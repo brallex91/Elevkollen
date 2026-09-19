@@ -40,7 +40,7 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
 
     /// <summary>Ett ämnes centrala innehåll och betygskriterier, renskrivna.</summary>
     public Task<SyllabusDto?> GetSyllabusAsync(string code) =>
-        GetCachedAsync<SyllabusDto?>($"syllabus:{code}", null, async () =>
+        GetCachedAsync<SyllabusDto?>($"syllabus:v2:{code}", null, async () =>
         {
             var response = await http.GetFromJsonAsync<SubjectResponse>(
                 $"subjects/{Uri.EscapeDataString(code)}?timespan=LATEST");
@@ -58,12 +58,16 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
 
             var criteria = s.KnowledgeRequirements
                 .Where(kr => SyllabusTextService.IsSelectableGradeStep(kr.GradeStep))
-                .Select(kr => new GradingCriterionDto(
-                    int.TryParse(kr.Year, out var y) ? y : 0,
-                    kr.GradeStep ?? "",
-                    SyllabusTextService.CleanCriterion(kr.Text)))
+                .SelectMany(kr => SyllabusTextService
+                    .SplitCriteria(kr.Text)
+                    .Select((c, i) => new CriterionDto(
+                        int.TryParse(kr.Year, out var y) ? y : 0,
+                        i,
+                        kr.GradeStep ?? "",
+                        c.Text,
+                        c.ValueWords)))
                 .Where(c => c.Text.Length > 0)
-                .OrderBy(c => c.Year).ThenBy(c => c.GradeStep)
+                .OrderBy(c => c.Year).ThenBy(c => c.Index).ThenBy(c => c.GradeStep)
                 .ToArray();
 
             return new SyllabusDto(s.Code, s.Name, contents, criteria);
