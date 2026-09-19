@@ -1,6 +1,6 @@
 # Elevkollen
 
-Ett verktyg där lärare dokumenterar elevers prestationer mot Skolverkets centrala innehåll och betygskriterier. Byggt för att ersätta den `Elevdokumentation.xlsx` som många lärare håller igång manuellt idag.
+Ett verktyg där lärare dokumenterar elevers prestationer mot Skolverkets centrala innehåll och betygskriterier.
 
 **All elevdata stannar i lärarens webbläsare.** Det finns ingen server, ingen databas och ingen inloggning mot något moln. Det är inte en begränsning — det är hela poängen.
 
