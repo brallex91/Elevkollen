@@ -33,6 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="_bindtest\" />
     <Folder Include="_diag\" />
   </ItemGroup>
   <!--

@@ -7,12 +7,12 @@ using Elevkollen.Shared;
 namespace Elevkollen.Services;
 
 /// <summary>
-/// Hämtar läroplaner direkt från Skolverkets öppna API och renskriver dem i webbläsaren.
-/// Ingen egen server är inblandad, och ingen persondata lämnar någonsin enheten.
-/// Basadressen sätts i wwwroot/appsettings.json.
+/// Loads syllabuses directly from Skolverket's open API and cleans them up in the
+/// browser. No server of our own is involved, and no personal data ever leaves the
+/// device. The base address is set in wwwroot/appsettings.json.
 ///
-/// Varje lyckat svar cachas i IndexedDB. Går nätet inte att nå används den senast
-/// hämtade kopian, så att läraren kan fortsätta arbeta offline.
+/// Every successful response is cached in IndexedDB. If the network is unreachable the
+/// most recently fetched copy is used, so the teacher can keep working offline.
 /// </summary>
 public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDisposable
 {
@@ -21,10 +21,10 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
     private async ValueTask<IJSObjectReference> DbAsync() =>
         _db ??= await js.InvokeAsync<IJSObjectReference>("import", "./js/db.js");
 
-    /// <summary>Sant när senaste anropet besvarades från den lokala cachen.</summary>
+    /// <summary>True when the last call was answered from the local cache.</summary>
     public bool ServedFromCache { get; private set; }
 
-    /// <summary>Grundskolans ämnen, sorterade på namn.</summary>
+    /// <summary>Compulsory school subjects, sorted by name.</summary>
     public Task<IReadOnlyList<SubjectDto>> GetSubjectsAsync() =>
         GetCachedAsync("syllabus:subjects", [], async () =>
         {
@@ -38,7 +38,7 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
                 .ToArray() as IReadOnlyList<SubjectDto>;
         });
 
-    /// <summary>Ett ämnes centrala innehåll och betygskriterier, renskrivna.</summary>
+    /// <summary>A subject's central content and grading criteria, cleaned up.</summary>
     public Task<SyllabusDto?> GetSyllabusAsync(string code) =>
         GetCachedAsync<SyllabusDto?>($"syllabus:v2:{code}", null, async () =>
         {
@@ -74,8 +74,8 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
         });
 
     /// <summary>
-    /// Kör hämtningen, cachar resultatet och faller tillbaka på den lokala kopian
-    /// när Skolverket inte går att nå.
+    /// Runs the fetch, caches the result and falls back to the local copy when
+    /// Skolverket is unreachable.
     /// </summary>
     private async Task<T> GetCachedAsync<T>(string key, T fallback, Func<Task<T>> fetch)
     {
@@ -92,7 +92,7 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
-            // Nätverket eller Skolverket är otillgängligt — vi faller tillbaka nedan.
+            // The network or Skolverket is unavailable — we fall back below.
         }
 
         var cached = await GetCacheAsync(key);
@@ -123,7 +123,7 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
         }
         catch (JSException)
         {
-            // En misslyckad cachning får aldrig stoppa ett lyckat anrop.
+            // A failed cache write must never break a successful call.
         }
     }
 
@@ -137,12 +137,12 @@ public sealed class SyllabusClient(HttpClient http, IJSRuntime js) : IAsyncDispo
             }
             catch (JSDisconnectedException)
             {
-                // Sidan är redan stängd — inget att städa.
+                // The page is already closed — nothing to clean up.
             }
         }
     }
 
-    // Skolverkets svarsformat — endast fälten vi faktiskt använder.
+    // Skolverket's response format — only the fields we actually use.
     private sealed record SubjectListResponse(
         [property: JsonPropertyName("subjects")] SubjectSummary[] Subjects);
 

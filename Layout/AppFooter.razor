@@ -1,6 +1,6 @@
 @using System.Reflection
 
-@* Diskret versionsstämpel längst ned. Versionen sätts av SetVersionFromGit i
+@* Discreet version stamp at the bottom. The version is set by SetVersionFromGit in
    Elevkollen.csproj, så den räknas upp automatiskt vid varje commit. *@
 
 <footer class="app-footer no-print">
@@ -19,7 +19,7 @@
 </footer>
 
 @code {
-    /// <summary>"1.0.42+ee6385b" — allt före + är versionen, efter är commit-hashen.</summary>
+    /// <summary>"1.0.42+ee6385b" — everything before + is the version, after it the commit hash.</summary>
     private static readonly string Informational =
         typeof(Program).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion

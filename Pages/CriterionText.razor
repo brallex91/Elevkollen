@@ -1,4 +1,4 @@
-@* Kriterietext där värdeorden är fetmarkerade, precis som i LGR. *@
+@* Criterion text with the value words in bold, just like in LGR. *@
 
 @if (Criterion is { } c)
 {
@@ -23,6 +23,6 @@ else
     /// <summary>Kriteriet vars text ska visas. Null innan ett betygssteg valts.</summary>
     [Parameter] public CriterionDto? Criterion { get; set; }
 
-    /// <summary>Text att visa när inget betygssteg valts ännu.</summary>
+    /// <summary>Text to show when no grade step has been picked yet.</summary>
     [Parameter] public string? Fallback { get; set; }
 }

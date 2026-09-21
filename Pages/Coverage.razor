@@ -121,7 +121,7 @@
         _classes = await Store.GetClassesAsync();
         _className = _classes.FirstOrDefault();
 
-        // Bara bedömda ämnen är meningsfulla här — resten har per definition noll täckning.
+        // Only assessed subjects are meaningful here — the rest have zero coverage by definition.
         _subjects = await Store.GetAssessedSubjectsAsync();
         _subjectCode = _subjects.FirstOrDefault()?.Code;
 
@@ -164,7 +164,7 @@
         _loading = false;
     }
 
-    /// <summary>Klassbeteckningen inleds med årskursen, t.ex. "4B" — den styr förvalt spann.</summary>
+    /// <summary>The class label starts with the school year, e.g. "4B" — it drives the default span.</summary>
     private static int? SchoolYearOf(string? className) =>
         !string.IsNullOrWhiteSpace(className) && char.IsDigit(className[0])
             ? className[0] - '0'

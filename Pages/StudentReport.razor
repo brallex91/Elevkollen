@@ -180,7 +180,7 @@ else
             .OrderBy(g => g.SubjectName, StringComparer.CurrentCulture)];
     }
 
-    /// <summary>Höstterminen börjar i juli, vårterminen i januari.</summary>
+    /// <summary>The autumn term starts in July, the spring term in January.</summary>
     private static DateOnly TermStart(DateOnly today) =>
         new(today.Year, today.Month >= 7 ? 7 : 1, 1);
 

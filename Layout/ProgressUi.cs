@@ -4,8 +4,8 @@ using Elevkollen.Shared;
 namespace Elevkollen.Layout;
 
 /// <summary>
-/// UI-färgerna för elevens utveckling. Ligger i klienten eftersom <see cref="Color"/>
-/// kommer från MudBlazor — texterna själva bor i <see cref="ProgressText"/>.
+/// UI colors for student progress. Lives in the client because <see cref="Color"/>
+/// comes from MudBlazor — the texts themselves live in <see cref="ProgressText"/>.
 /// </summary>
 public static class ProgressUi
 {

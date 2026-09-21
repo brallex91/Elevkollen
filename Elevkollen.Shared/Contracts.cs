@@ -1,6 +1,6 @@
 namespace Elevkollen.Shared;
 
-/// <summary>Elevens utveckling för en bedömning.</summary>
+/// <summary>Student progress for an assessment.</summary>
 public enum Progress
 {
     NotAchieved = 0,
@@ -8,24 +8,23 @@ public enum Progress
     Achieved = 2,
 }
 
-/// <summary>Domänspråket för utveckling, på ett enda ställe.</summary>
+/// <summary>The domain language for progress, in one place.</summary>
 public static class ProgressText
 {
-    /// <summary>Betygsstegen läraren kan välja mellan i UI.</summary>
     public static readonly string[] GradeSteps = ["A", "B", "C", "D", "E", "F"];
 
-    /// <summary>Betygssteget för en prestation som inte når kriteriet.</summary>
+    /// <summary>The grade step for work that does not meet the criterion.</summary>
     public const string NotPassedStep = "F";
 
     /// <summary>
-    /// Utvecklingen följer av betygssteget: F betyder att kriteriet inte är uppnått,
-    /// övriga steg att det är uppnått. Tomt steg (årskurs 1 och 3) innebär
-    /// godtagbara kunskaper, vilket också räknas som uppnått.
+    /// Progress follows from the grade step: F means the criterion is not met, any other
+    /// step that it is. An empty step (years 1 and 3) means acceptable knowledge, which
+    /// also counts as met.
     /// </summary>
     public static Progress ProgressFor(string? gradeStep) =>
         gradeStep == NotPassedStep ? Progress.NotAchieved : Progress.Achieved;
 
-    /// <summary>Etikett för ett betygssteg, inklusive de steg som saknar bokstav.</summary>
+    /// <summary>Label for a grade step, including the steps that have no letter.</summary>
     public static string StepLabel(string? gradeStep) => gradeStep switch
     {
         NotPassedStep => "Ej godkänd",
@@ -33,7 +32,7 @@ public static class ProgressText
         _ => $"Betyg {gradeStep}",
     };
 
-    /// <summary>Utvecklingsalternativen i den ordning de visas för läraren.</summary>
+    /// <summary>Progress options in the order they are shown to the teacher.</summary>
     public static readonly Progress[] All =
         [Progress.NotAchieved, Progress.InProgress, Progress.Achieved];
 
@@ -44,7 +43,7 @@ public static class ProgressText
         _ => "Ej uppnått",
     };
 
-    /// <summary>Kort symbol för trånga celler i klassöversikten.</summary>
+    /// <summary>Short symbol for the tight cells in the class overview.</summary>
     public static string Symbol(this Progress progress) => progress switch
     {
         Progress.Achieved => "✓",
@@ -53,7 +52,7 @@ public static class ProgressText
     };
 }
 
-// ---------- Elever ----------
+// ---------- Students ----------
 
 public sealed record StudentDto(
     int Id,
@@ -82,8 +81,8 @@ public sealed record SaveStudentRequest(
     string? ClassName);
 
 /// <summary>
-/// Klassbeteckningen skrivs som årskurs + klass, t.ex. "4B". Lärare skriver bara in
-/// bokstaven, så årskursen sätts framför när den finns och inte redan står där.
+/// The class label is written as year + class, e.g. "4B". Teachers enter only the
+/// letter, so the year is prefixed when present and not already there.
 /// </summary>
 public static class ClassLabel
 {
@@ -100,8 +99,8 @@ public static class ClassLabel
     }
 
     /// <summary>
-    /// Städar lärarens inmatning: trimmar, slår ihop dubbla mellanslag och ger varje ord
-    /// stor begynnelsebokstav. "andra klassen" blir "Andra Klassen" och "a" blir "A".
+    /// Cleans teacher input: trims, collapses double spaces and capitalises each word.
+    /// "andra klassen" becomes "Andra Klassen" and "a" becomes "A".
     /// </summary>
     public static string? Normalize(string? className)
     {
@@ -117,7 +116,7 @@ public static class ClassLabel
     }
 }
 
-// ---------- Bedömningar ----------
+// ---------- Assessments ----------
 
 public sealed record AssessmentDto(
     int Id,
@@ -148,9 +147,9 @@ public sealed record SaveAssessmentRequest(
     int? CriterionYear = null,
     int? CriterionIndex = null);
 
-// ---------- Statistik ----------
+// ---------- Statistics ----------
 
-/// <summary>Utveckling över tid, per ämne, för en elev.</summary>
+/// <summary>Progress over time, per subject, for one student.</summary>
 public sealed record StudentStatsDto(
     int StudentId,
     IReadOnlyList<SubjectProgressDto> Subjects,
@@ -171,9 +170,9 @@ public sealed record ProgressPointDto(
     Progress Progress,
     string? GradeStep);
 
-// ---------- Klassöversikt ----------
+// ---------- Class overview ----------
 
-/// <summary>Matris över en klass: elever på raderna, arbetsområden på kolumnerna.</summary>
+/// <summary>Matrix over a class: students on rows, work areas on columns.</summary>
 public sealed record ClassOverviewDto(
     IReadOnlyList<OverviewColumnDto> Columns,
     IReadOnlyList<OverviewRowDto> Rows);
@@ -183,7 +182,7 @@ public sealed record OverviewColumnDto(
     string SubjectName,
     string WorkArea);
 
-/// <summary>Cells index följer Columns. Null betyder att eleven saknar bedömning där.</summary>
+/// <summary>Cells index follows Columns. Null means the student has no assessment there.</summary>
 public sealed record OverviewRowDto(
     int StudentId,
     string StudentName,
@@ -197,9 +196,9 @@ public sealed record OverviewCellDto(
     DateOnly Date,
     int AssessmentCount);
 
-// ---------- Startsida ----------
+// ---------- Dashboard ----------
 
-/// <summary>Sammanställning av all lokal data, för startsidans diagram och nyckeltal.</summary>
+/// <summary>Aggregate of all local data, for the dashboard charts and key figures.</summary>
 public sealed record DashboardDto(
     int StudentCount,
     int AssessmentCount,
@@ -234,7 +233,7 @@ public sealed record RecentAssessmentDto(
     Progress Progress,
     DateOnly Date);
 
-/// <summary>Elever med flest ej uppnådda bedömningar, som en mjuk signal till läraren.</summary>
+/// <summary>Students with the most unmet assessments, as a soft signal to the teacher.</summary>
 public sealed record AttentionStudentDto(
     int StudentId,
     string StudentName,
@@ -242,27 +241,27 @@ public sealed record AttentionStudentDto(
     int NotAchieved,
     int Total);
 
-// ---------- Skolverket (renskrivet) ----------
+// ---------- Skolverket (cleaned up) ----------
 
 public sealed record SubjectDto(string Code, string Name);
 
-/// <summary>Ett ämnes läroplan, renskriven och grupperad för UI.</summary>
+/// <summary>A subject's syllabus, cleaned up and grouped for the UI.</summary>
 public sealed record SyllabusDto(
     string Code,
     string Name,
     IReadOnlyList<CentralContentGroupDto> CentralContents,
     IReadOnlyList<CriterionDto> GradingCriteria);
 
-/// <summary>Punkter under en h4-rubrik, för en årskursspann (t.ex. "4-6").</summary>
+/// <summary>Items under one h4 heading, for a year span (e.g. "4-6").</summary>
 public sealed record CentralContentGroupDto(
     string YearSpan,
     string Heading,
     IReadOnlyList<string> Items);
 
 /// <summary>
-/// Ett enskilt kriterium, dvs. ett stycke ur Skolverkets betygskriterier.
-/// Identifieras av årskurs + styckeindex, inte av betygssteg, eftersom samma
-/// stycke återkommer i varje betygssteg med bara värdeorden utbytta.
+/// A single criterion, i.e. one paragraph from Skolverket's grading criteria.
+/// Identified by year + paragraph index rather than grade step, since the same
+/// paragraph recurs for every step with only the value words swapped.
 /// </summary>
 public sealed record CriterionDto(
     int Year,
@@ -272,22 +271,22 @@ public sealed record CriterionDto(
     IReadOnlyList<string> ValueWords)
 {
     /// <summary>
-    /// Texten uppdelad så att värdeorden kan fetmarkeras i UI, precis som i LGR.
-    /// Beräknas vid anrop eftersom den bara behövs för det kriterium som visas.
+    /// The text split so value words can be bolded in the UI, as in LGR.
+    /// Computed on access since it is only needed for the criterion being shown.
     /// </summary>
     public IReadOnlyList<TextSegment> Segments => TextSegment.Highlight(Text, ValueWords);
 }
 
 /// <summary>
-/// En bit text som antingen är ett värdeord eller vanlig löptext.
-/// Låter UI:t rendera fetstil utan att gå via HTML.
+/// A piece of text that is either a value word or plain prose.
+/// Lets the UI render bold without going through HTML.
 /// </summary>
 public sealed record TextSegment(string Text, bool IsValueWord)
 {
     /// <summary>
-    /// Delar texten vid varje förekomst av ett värdeord. Längsta ordet matchas
-    /// först, så att "väl fungerande" inte delas av kortare "fungerande".
-    /// Hittas inget värdeord returneras texten som ett enda vanligt segment.
+    /// Splits the text at every value word occurrence. The longest word matches first,
+    /// so "väl fungerande" is not split by the shorter "fungerande".
+    /// With no value word the text is returned as a single plain segment.
     /// </summary>
     public static IReadOnlyList<TextSegment> Highlight(string? text, IReadOnlyList<string>? valueWords)
     {
@@ -326,7 +325,7 @@ public sealed record TextSegment(string Text, bool IsValueWord)
                 segments.Add(new TextSegment(text[plain..i], false));
             }
 
-            // Behåll originalets skiftläge i stället för värdeordets.
+            // Keep the original casing rather than the value word's.
             segments.Add(new TextSegment(text.Substring(i, hit.Length), true));
 
             i += hit.Length;
@@ -343,8 +342,8 @@ public sealed record TextSegment(string Text, bool IsValueWord)
 }
 
 /// <summary>
-/// Ett kriterium med sina varianter per betygssteg. Läraren väljer först kriteriet
-/// och sedan vilket betygssteg elevens prestation motsvarar.
+/// A criterion with its variants per grade step. The teacher picks the criterion
+/// first, then which grade step the student's work corresponds to.
 /// </summary>
 public sealed record CriterionChoiceDto(
     int Year,
@@ -352,17 +351,17 @@ public sealed record CriterionChoiceDto(
     string Text,
     IReadOnlyList<CriterionDto> Variants)
 {
-    /// <summary>Visningsetikett, t.ex. "Årskurs 6 · Kriterium 3".</summary>
+    /// <summary>Display label, e.g. "Årskurs 6 · Kriterium 3".</summary>
     public string Label => $"Årskurs {Year} · Kriterium {Index + 1}";
 }
 
 /// <summary>
-/// Grupperar kriterier per årskurs och styckeindex.
+/// Groups criteria by year and paragraph index.
 ///
-/// Skolverket skriver samma antal stycken för varje betygssteg, så stycke n
-/// beskriver samma förmåga i E, C och A. Skulle en framtida läroplan bryta den
-/// parallelliteten faller vi tillbaka på att låta varje betygssteg bli ett eget
-/// val, så att inget innehåll tappas bort eller paras ihop felaktigt.
+/// Skolverket writes the same number of paragraphs for every grade step, so paragraph n
+/// describes the same ability in E, C and A. Should a future syllabus break that
+/// parallelism we fall back to letting each grade step be its own choice, so that no
+/// content is lost or incorrectly paired.
 /// </summary>
 public static class CriterionGroup
 {
@@ -381,7 +380,7 @@ public static class CriterionGroup
                 {
                     var variants = byIndex.OrderBy(c => StepOrder(c.GradeStep)).ToList();
 
-                    // E-varianten är den mest neutrala formuleringen och används som bastext.
+                    // The E variant is the most neutral wording and serves as base text.
                     var baseText = variants[0].Text;
 
                     choices.Add(new CriterionChoiceDto(byYear.Key, byIndex.Key, baseText, variants));
@@ -399,7 +398,7 @@ public static class CriterionGroup
         return choices;
     }
 
-    /// <summary>E först, sedan C, sedan A. Tomt steg (årskurs 1/3) hamnar först.</summary>
+    /// <summary>E first, then C, then A. An empty step (years 1 and 3) sorts first.</summary>
     private static int StepOrder(string step) => step switch
     {
         "" => 0,
@@ -410,11 +409,39 @@ public static class CriterionGroup
     };
 }
 
-// ---------- Täckningsgrad ----------
+/// <summary>
+/// Maps between school year and Skolverket's year spans, in one place.
+/// </summary>
+public static class YearSpans
+{
+    /// <summary>Maps a school year to its span, e.g. 5 to "4-6".</summary>
+    public static string? For(int? year) => year switch
+    {
+        >= 1 and <= 3 => "1-3",
+        >= 4 and <= 6 => "4-6",
+        >= 7 and <= 9 => "7-9",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Years carrying grading criteria within a span. Criteria land at the end of each
+    /// span, but Swedish also has criteria for year 1. Most subjects have none at all
+    /// below year 6, since grades are not set before then.
+    /// </summary>
+    public static int[] CriterionYears(string? span) => span switch
+    {
+        "1-3" => [1, 3],
+        "4-6" => [6],
+        "7-9" => [9],
+        _ => [],
+    };
+}
+
+// ---------- Coverage ----------
 
 /// <summary>
-/// Hur stor del av ett ämnes centrala innehåll som blivit bedömt. Beräknas per klass:
-/// en punkt räknas som täckt så snart minst en elev bedömts mot den.
+/// How much of a subject's central content has been assessed. Computed per class:
+/// an item counts as covered as soon as at least one student is assessed against it.
 /// </summary>
 public sealed record CoverageDto(
     string SubjectName,
@@ -427,7 +454,7 @@ public sealed record CoverageDto(
     public double Share => Total == 0 ? 0 : (double)Covered / Total;
 }
 
-/// <summary>Punkterna under en rubrik, med markering för vilka som är bedömda.</summary>
+/// <summary>The items under one heading, flagged for which are assessed.</summary>
 public sealed record CoverageGroupDto(
     string Heading,
     IReadOnlyList<CoverageItemDto> Items)
@@ -438,12 +465,12 @@ public sealed record CoverageGroupDto(
 public sealed record CoverageItemDto(string Text, bool IsCovered);
 
 /// <summary>
-/// Jämför läroplanens centrala innehåll mot det läraren faktiskt bedömt. Ren logik utan
-/// beroenden, så den är enkel att enhetstesta.
+/// Compares the syllabus central content against what the teacher actually assessed.
+/// Pure logic without dependencies, so it is easy to unit test.
 ///
-/// Kopplingen görs på texten själv, eftersom en bedömning inte lagrar något stabilare id.
-/// Omformulerar Skolverket en punkt bryts därför kopplingen till äldre bedömningar — de
-/// hamnar då i <see cref="CoverageDto.Unmatched"/> i stället för att tyst försvinna.
+/// Matching is done on the text itself, since an assessment stores no more stable id.
+/// If Skolverket rewords an item the link to older assessments therefore breaks — they
+/// then end up in <see cref="CoverageDto.Unmatched"/> instead of silently disappearing.
 /// </summary>
 public static class CoverageCalculator
 {
@@ -489,8 +516,8 @@ public static class CoverageCalculator
     }
 
     /// <summary>
-    /// Normaliserar texten inför jämförelse. Skolverkets renskrivning kan ge olika
-    /// mellanrum över tid, och det ska inte räknas som en ny punkt.
+    /// Normalises the text before comparison. Skolverket's cleanup can yield different
+    /// whitespace over time, and that must not count as a new item.
     /// </summary>
     private static string Key(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));

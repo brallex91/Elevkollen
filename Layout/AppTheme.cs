@@ -3,14 +3,14 @@ using MudBlazor;
 namespace Elevkollen.Layout;
 
 /// <summary>
-/// Appens enda färgtema. Båda lägena delar samma mint/blågröna släkt och undviker
-/// mättade signalfärger, så att skärmen går att titta på länge.
-/// Ljust läge är luftig mint med mörkgrön text i stället för svart på vitt;
-/// mörkt läge är blågrönt snarare än svart. MudBlazors standardpaletter används inte.
+/// The app's single color theme. Both modes share the same mint/teal family and avoid
+/// saturated signal colors, so the screen stays comfortable to look at for long stretches.
+/// Light mode is airy mint with dark green text instead of black on white; dark mode is
+/// teal rather than black. MudBlazor's default palettes are not used.
 /// </summary>
 internal static class AppTheme
 {
-    // Delade accentfärger. Samma nyanser i båda lägena håller ikoner och knappar igenkännbara.
+    // Shared accent colors. The same shades in both modes keep icons and buttons recognizable.
     private const string Mint = "#3FA894";
     private const string MintSoft = "#5FBFAC";
     private const string Teal = "#4E8D9C";
@@ -34,7 +34,7 @@ internal static class AppTheme
             Black = "#1B302A",
             White = "#FFFFFF",
 
-            // Ljus, luftig mint. Aldrig rent vitt — en svag grön underton vilar ögat.
+            // Light, airy mint. Never pure white — a faint green undertone rests the eye.
             Background = "#F4FAF7",
             BackgroundGray = "#E9F3EF",
             Surface = "#FFFFFF",
@@ -45,7 +45,7 @@ internal static class AppTheme
             DrawerText = "#3A5B53",
             DrawerIcon = "#4C7168",
 
-            // Mjuk mörkgrön text i stället för svart, så kontrasten inte blir hård.
+            // Soft dark green text instead of black, so the contrast is not harsh.
             TextPrimary = "#27473F",
             TextSecondary = "#5F8177",
             TextDisabled = "#27473F5E",
@@ -99,7 +99,7 @@ internal static class AppTheme
             Black = "#0C1614",
             White = "#F2F7F5",
 
-            // Blågrön mörkerton, inte svart. Mjukare för ögat i mörka rum.
+            // Teal dark tone, not black. Easier on the eye in dark rooms.
             Background = "#162322",
             BackgroundGray = "#111C1B",
             Surface = "#1E2E2C",

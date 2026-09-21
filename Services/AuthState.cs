@@ -3,10 +3,10 @@ using Microsoft.JSInterop;
 namespace Elevkollen.Services;
 
 /// <summary>
-/// Enkel inloggningsspärr med hårdkodade uppgifter.
+/// Simple sign-in gate with hard-coded credentials.
 ///
-/// OBS: Detta är en platshållare, inte säkerhet — all data ligger ändå lokalt i
-/// webbläsaren. Byt till riktig autentisering innan appen hostas.
+/// NOTE: this is a placeholder, not security — all data lives locally in the browser
+/// anyway. Replace with real authentication before hosting the app.
 /// </summary>
 public sealed class AuthState(IJSRuntime js)
 {
@@ -18,7 +18,7 @@ public sealed class AuthState(IJSRuntime js)
 
     public event Action? Changed;
 
-    /// <summary>Läser sparad inloggning från localStorage vid uppstart.</summary>
+    /// <summary>Reads the saved sign-in from localStorage at startup.</summary>
     public async Task InitializeAsync()
     {
         var value = await js.InvokeAsync<string?>("localStorage.getItem", StorageKey);

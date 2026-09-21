@@ -1,9 +1,9 @@
-// Tunn IndexedDB-wrapper. All elevdata stannar i webbläsaren och lämnar aldrig enheten.
+// Thin IndexedDB wrapper. All student data stays in the browser and never leaves the device.
 const DB_NAME = 'elevkollen';
 const DB_VERSION = 2;
 
-// Databasen hette 'shoolplanner' före omdöpningen. Den lämnas inte kvar och skräpar
-// i webbläsarprofilen, men innehållet går förlorat -- ta en säkerhetskopia först.
+// The database was named 'shoolplanner' before the rename. The old one is not left behind
+// cluttering the browser profile, but its contents are lost -- back up first.
 const LEGACY_DB_NAME = 'shoolplanner';
 
 let dbPromise = null;
@@ -27,7 +27,7 @@ function open() {
                 assessments.createIndex('studentId', 'studentId');
             }
 
-            // v2: nyckel/värde för appdata som inte är persondata (senaste export, läroplanscache).
+            // v2: key/value for app data that is not personal data (last export, syllabus cache).
             if (!db.objectStoreNames.contains('meta')) {
                 db.createObjectStore('meta', { keyPath: 'key' });
             }
@@ -57,7 +57,7 @@ function request(req, map = x => x) {
     return box;
 }
 
-// Utan id tilldelar IndexedDB själv nyckeln via autoIncrement.
+// Without an id, IndexedDB assigns the key itself via autoIncrement.
 function strip(entity) {
     if (entity.id === null || entity.id === undefined || entity.id === 0) {
         const { id, ...rest } = entity;
@@ -81,7 +81,7 @@ export function putStudent(student) {
 export function deleteStudent(id) {
     return tx(['students', 'assessments'], 'readwrite', (students, assessments) => {
         students.delete(id);
-        // Kaskadborttagning: en elevs bedömningar får aldrig bli föräldralösa.
+        // Cascade delete: a student's assessments must never be orphaned.
         const cursor = assessments.index('studentId').openCursor(IDBKeyRange.only(id));
         cursor.onsuccess = () => {
             const c = cursor.result;
@@ -111,7 +111,7 @@ export function deleteAssessment(id) {
     return tx(['assessments'], 'readwrite', store => request(store.delete(id), () => true));
 }
 
-/// Flera bedömningar i en transaktion: hela klassen sparas eller ingen alls.
+/// Several assessments in one transaction: the whole class is saved, or none of it.
 export function putAssessments(assessments) {
     return tx(['assessments'], 'readwrite', store => {
         for (const a of assessments) {
@@ -121,7 +121,7 @@ export function putAssessments(assessments) {
     });
 }
 
-/// Bedömningar som hör till en och samma "bedömningssession": ämne + arbetsområde + datum.
+/// Assessments belonging to one and the same occasion: subject + work area + date.
 export function findAssessments(subjectCode, workArea, date) {
     const area = workArea || null;
     return tx(['assessments'], 'readonly', store =>
@@ -148,9 +148,8 @@ export function setMeta(key, value) {
     return tx(['meta'], 'readwrite', store => request(store.put({ key, value }), () => true));
 }
 
-// Nya kopior märks med det aktuella namnet. Kopior tagna före omdöpningen måste
-// fortsätta gå att importera -- de är enda vägen tillbaka för data som låg i den
-// gamla databasen.
+// New backups carry the current name. Backups taken before the rename must keep working
+// on import -- they are the only way back for data that lived in the old database.
 const BACKUP_FORMAT = 'elevkollen-backup';
 const BACKUP_FORMATS_ACCEPTED = [BACKUP_FORMAT, 'shoolplanner-backup'];
 
@@ -164,7 +163,7 @@ export async function exportAll() {
     });
 }
 
-/// Ersätter all data i en enda transaktion: antingen lyckas hela importen eller ingen del av den.
+/// Replaces all data in a single transaction: either the whole import succeeds or none of it.
 export async function importAll(json) {
     const data = JSON.parse(json);
 
@@ -187,7 +186,7 @@ export async function importAll(json) {
     return { students: data.students.length, assessments: (data.assessments ?? []).length };
 }
 
-/// Räknar rader utan att läsa ut dem — MainLayout frågar vid varje inloggning.
+/// Counts rows without reading them — MainLayout asks on every sign-in.
 export function counts() {
     return tx(['students', 'assessments'], 'readonly', (students, assessments) => {
         const s = request(students.count());

@@ -59,8 +59,8 @@
         content: "Ett fel har inträffat."
     }
 
-/* Startskärmen medan WebAssembly laddas. Samma mörka palett som appen, så att
-   övergången till MudBlazor blir omärklig. */
+/* The splash screen while WebAssembly loads. The same dark palette as the app, so
+   the transition to MudBlazor is imperceptible. */
 .boot {
     position: fixed;
     inset: 0;
@@ -93,7 +93,7 @@
         height: 2.5rem;
     }
 
-/* Loggan på inloggningssidan — samma märke som boot-skärmen, i mindre format. */
+/* The logo on the login page — the same mark as the boot screen, in a smaller size. */
 .login-brand {
     display: flex;
     align-items: center;
@@ -131,8 +131,8 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
-    /* Blazor sätter --blazor-load-percentage först när nedladdningen börjar.
-       Fram till dess glider stapeln fram och tillbaka av sig själv. */
+    /* Blazor only sets --blazor-load-percentage once the download starts.
+       Until then the bar glides back and forth on its own. */
     .boot-bar span {
         display: block;
         height: 100%;
@@ -178,7 +178,7 @@
     }
 }
 
-/* Så fort riktig progress finns slutar stapeln vandra och visar bara andelen. */
+/* As soon as real progress exists the bar stops wandering and just shows the share. */
 [style*="--blazor-load-percentage"] .boot-bar span {
     animation: none;
     transform: none;
@@ -188,7 +188,7 @@ code {
     color: #2F8F7D;
 }
 
-/* Klickbar .edok-förklaring. Ankaret positionerar popovern under själva ordet. */
+/* Clickable .edok explanation. The anchor positions the popover under the word itself. */
 .edok-anchor {
     position: relative;
     display: inline-block;
@@ -209,11 +209,11 @@ code {
     max-width: 22rem;
 }
 
-/* Diskret versionsstämpel längst ned. Färgerna följer temat, så den tonas ned
-   lika mycket i ljust som mörkt läge. */
+/* Discreet version stamp at the bottom. The colors follow the theme, so it is toned down
+   equally in light and dark mode. */
 
-/* Huvudinnehållet fyller alltid fönstret, så footern trycks ned till botten
-   i stället för att flyta mitt på sidan när innehållet är kort. */
+/* The main content always fills the window, so the footer is pushed to the bottom
+   instead of floating mid-page when the content is short. */
 .mud-main-content {
     display: flex;
     flex-direction: column;
@@ -266,8 +266,8 @@ code {
     background: var(--mud-palette-action-default-hover);
 }
 
-/* Adornment-ikonerna är aria-hidden men fångar ändå fokus vid klick, vilket ger en
-   tillgänglighetsvarning i konsolen. Låt klicket gå vidare till knappen runt ikonen. */
+/* The adornment icons are aria-hidden but still capture focus on click, which gives a
+   accessibility warning in the console. Let the click pass through to the button around the icon. */
 .mud-input-adornment-icon,
 .mud-input-adornment svg {
     pointer-events: none;
@@ -277,7 +277,7 @@ code {
     pointer-events: auto;
 }
 
-/* Ingen sida får någonsin kräva horisontell scroll. */
+/* No page may ever require horizontal scrolling. */
 html, body {
     max-width: 100%;
     overflow-x: hidden;
@@ -287,7 +287,7 @@ html, body {
     overflow-x: hidden;
 }
 
-/* Långa läroplanstexter ska brytas, inte bredda sidan. */
+/* Long syllabus texts must wrap, not widen the page. */
 .mud-table-cell,
 .mud-card,
 .picker-item {
@@ -303,7 +303,7 @@ html, body {
     white-space: normal;
 }
 
-/* Kriterietexter är långa. Listan får radbryta och bli hög i stället för att kapas. */
+/* Criterion texts are long. The list may wrap and grow tall instead of being clipped. */
 .criterion-popover .mud-list-item {
     align-items: flex-start;
     white-space: normal;
@@ -315,26 +315,26 @@ html, body {
     white-space: normal;
 }
 
-/* Valt kriterium visas i sin helhet, eftersom inmatningsfältet bara rymmer en rad. */
+/* The selected criterion is shown in full, since the input field only fits one line. */
 .criterion-panel {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     background-color: var(--mud-palette-background-gray);
 }
 
-/* Värdeorden är det enda som skiljer betygsstegen åt, därför fetmarkeras de som i LGR. */
+/* The value words are the only thing separating the grade steps, hence bold as in LGR. */
 .value-word {
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
-/* Varje kriterium under ett arbetsområde är ett eget kort. */
+/* Each criterion under a work area is its own card. */
 .criterion-card {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
 }
 
-    /* Panelen ligger inuti kortet och behöver därför en egen avgränsning. */
+    /* The panel sits inside the card and therefore needs its own boundary. */
     .criterion-card .criterion-panel {
         background-color: var(--mud-palette-background);
     }
@@ -345,7 +345,7 @@ html, body {
     gap: 0.25rem;
 }
 
-/* Betygsvalen blir egna rader med tydlig träffyta i stället för hoptryckta bredvid varandra. */
+/* The grade choices become their own rows with a clear hit area instead of being squeezed side by side. */
 .criterion-step {
     align-items: flex-start;
     margin: 0;
@@ -361,7 +361,7 @@ html, body {
         margin-top: 0.15rem;
     }
 
-/* Sidhuvuden: titel och knappar bryter till egna rader i stället för att klämmas ihop. */
+/* Page headers: title and buttons break onto their own rows instead of being crammed together. */
 .page-head {
     row-gap: 0.75rem;
 }
@@ -391,7 +391,7 @@ html, body {
         }
 }
 
-/* Klassbedömning: raderna blir kort på mobil så inget innehåll kläms bort. */
+/* Class assessment: the rows become cards on mobile so no content gets clipped. */
 .class-select {
     max-width: 240px;
 }
@@ -402,7 +402,7 @@ html, body {
     gap: 0.375rem;
 }
 
-/* Rubriken "Betygssteg" får aldrig brytas mitt i ordet. */
+/* The "Betygssteg" heading must never break mid-word. */
 .class-table .grade-col {
     width: 1%;
     white-space: nowrap;
@@ -427,7 +427,7 @@ html, body {
     }
 }
 
-/* Filväljaren döljs och ersätts av en MudButton med svensk text. */
+/* The file picker is hidden and replaced by a MudButton with Swedish text. */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -449,7 +449,7 @@ html, body {
     text-align: start;
 }
 
-/* Startsidans diagram: lätta och byggda i ren CSS/SVG i stället för ett extra bibliotek. */
+/* Dashboard charts: lightweight and built in plain CSS/SVG instead of an extra library. */
 .dash-dot {
     width: 0.625rem;
     height: 0.625rem;
@@ -508,7 +508,7 @@ html, body {
 .tour-blur {
     position: fixed;
     z-index: 2100;
-    /* Följer temat: mjukt grönt dis i ljust läge, djupare i mörkt. */
+    /* Follows the theme: a soft green haze in light mode, deeper in dark. */
     background: var(--mud-palette-overlay-dark);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -554,7 +554,7 @@ html, body {
     }
 }
 
-/* Rapportvyn: skär bort appskalet och skriv ut arket i svärta på vitt. */
+/* The report view: strip the app shell and print the sheet in black on white. */
 .report-muted {
     font-size: 0.78rem;
     opacity: 0.7;
@@ -580,8 +580,8 @@ html, body {
     max-width: 100%;
 }
 
-/* Procentbredder i stället för px, så kolumnerna fyller arket i stället för att
-   klumpa ihop sig till höger på breda skärmar. */
+/* Percentage widths instead of px, so the columns fill the sheet rather than
+   bunching up on the right on wide screens. */
 .report-table {
     width: 100%;
     table-layout: fixed;
@@ -602,7 +602,7 @@ html, body {
         white-space: nowrap;
     }
 
-    /* Sammanfattning: ämnet tar plats, siffrorna hålls smala. */
+    /* Summary: the subject takes room, the numbers stay narrow. */
     .report-table:not(.detail) th:first-child,
     .report-table:not(.detail) td:first-child {
         width: 40%;
@@ -613,7 +613,7 @@ html, body {
         width: 15%;
     }
 
-    /* Detaljtabell: datum, arbetsområde, utveckling, steg, kommentar. */
+    /* Detail table: date, work area, progress, step, comment. */
     .report-table.detail th:nth-child(1),
     .report-table.detail td:nth-child(1) {
         width: 12%;
@@ -639,7 +639,7 @@ html, body {
         width: 23%;
     }
 
-/* På mobil blir varje rad ett kort med etikett framför värdet. */
+/* On mobile each row becomes a card with the label in front of the value. */
 @media (max-width: 767.98px) {
     .report-head-meta {
         text-align: left;
@@ -731,7 +731,7 @@ html, body {
         table-layout: fixed;
     }
 
-    /* Utskriften ska alltid vara en riktig tabell, även om skärmen är smal. */
+    /* The printout must always be a real table, even if the screen is narrow. */
     .report-table,
     .report-table tbody,
     .report-table tr,
@@ -768,7 +768,7 @@ html, body {
         text-align: right !important;
     }
 
-    /* Håll ihop ett ämne på samma sida när det går. */
+    /* Keep a subject together on the same page where possible. */
     .report-section {
         break-inside: avoid;
     }

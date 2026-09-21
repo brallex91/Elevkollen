@@ -10,8 +10,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddMudServices();
 
-// Skolverkets öppna API anropas direkt från webbläsaren — ingen egen server är inblandad.
-// All elevdata ligger lokalt i IndexedDB och lämnar aldrig enheten.
+// Skolverket's open API is called directly from the browser \u2014 no server of our own.
+// All student data lives locally in IndexedDB and never leaves the device.
 var syllabusBaseUrl = builder.Configuration["Syllabus:BaseUrl"]
     ?? "https://api.skolverket.se/syllabus/v1/";
 builder.Services.AddHttpClient<SyllabusClient>(http => http.BaseAddress = new Uri(syllabusBaseUrl));

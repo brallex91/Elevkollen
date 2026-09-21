@@ -1,80 +1,80 @@
 # Elevkollen
 
-Ett verktyg där lärare dokumenterar elevers prestationer mot Skolverkets centrala innehåll och betygskriterier.
+A tool where teachers document student performance against the Swedish National Agency for Education's central content and grading criteria.
 
-**All elevdata stannar i lärarens webbläsare.** Det finns ingen server, ingen databas och ingen inloggning mot något moln. Det är inte en begränsning — det är hela poängen.
+**All student data stays in the teacher's browser.** There is no server, no database and no cloud sign-in. That is not a limitation — it is the whole point.
 
 ---
 
-## Varför appen ser ut som den gör
+## Why the app looks the way it does
 
-En lärare hanterar namn, betyg och omdömen om barn. Det är känsliga personuppgifter. Den enklaste vägen till GDPR-efterlevnad är att aldrig samla in dem centralt.
+A teacher handles names, grades and judgements about children. That is sensitive personal data. The simplest path to GDPR compliance is to never collect it centrally.
 
-Därför är applikationen en ren Blazor WebAssembly-klient. Elever och bedömningar lagras i webbläsarens IndexedDB, läroplanen hämtas direkt från Skolverkets öppna API, och ingenting passerar en backend — för det finns ingen.
+The application is therefore a pure Blazor WebAssembly client. Students and assessments are stored in the browser's IndexedDB, the syllabus is fetched directly from Skolverket's open API, and nothing passes through a backend — because there isn't one.
 
-| Var | Innehåll | Persondata |
+| Where | Contents | Personal data |
 |---|---|---|
-| IndexedDB `students`, `assessments` | Elever, bedömningar | **Ja** |
-| IndexedDB `meta` | Senaste export, cachad läroplan | Nej |
-| Skolverkets API | Läroplanen | Nej |
-| `localStorage` | Inloggning, om guiden är sedd | Nej |
+| IndexedDB `students`, `assessments` | Students, assessments | **Yes** |
+| IndexedDB `meta` | Last export, cached syllabus | No |
+| Skolverket's API | The syllabus | No |
+| `localStorage` | Sign-in, whether the tour has been seen | No |
 
-Kompromissen är att datan är lika flyktig som webbläsarprofilen. Därför är säkerhetskopiering en förstklassig funktion och inte en eftertanke.
+The trade-off is that the data is as volatile as the browser profile. Backups are therefore a first-class feature, not an afterthought.
 
 ---
 
-## Funktioner
+## Features
 
-| Sida | Route | Vad den gör |
+| Page | Route | What it does |
 |---|---|---|
-| Startsida | `/` | Nyckeltal, betygsfördelning, klass- och ämnesdiagram |
-| Elever | `/elever` | Lista, sök och filtrera |
-| Elevkort | `/elever/{id}` | Bedömningar och utveckling över tid |
-| Rapport | `/elever/{id}/rapport` | Utskriftsvänligt underlag för utvecklingssamtal |
-| Klassöversikt | `/klassoversikt` | Matris elever × arbetsområden, färgad efter senaste bedömning |
-| Klassbedömning | `/klassbedomning` | Bedöm en hel klass i ett svep |
-| Säkerhetskopia | `/sakerhetskopia` | Krypterad export och import |
+| Dashboard | `/` | Key figures, grade distribution, class and subject charts |
+| Students | `/elever` | List, search and filter |
+| Student card | `/elever/{id}` | Assessments and progress over time |
+| Report | `/elever/{id}/rapport` | Print-friendly basis for parent-teacher meetings |
+| Class overview | `/klassoversikt` | Matrix of students × work areas, colored by the latest assessment |
+| Class assessment | `/klassbedomning` | Assess a whole class in one pass |
+| Backup | `/sakerhetskopia` | Encrypted export and import |
 
-**Klassbedömning** identifierar ett tillfälle som ämne + arbetsområde + datum. Ändras något av dem hämtas befintliga poster och förifyller raderna, så att spara uppdaterar i stället för att skapa dubbletter.
+**Class assessment** identifies an occasion as subject + work area + date. When any of them changes, existing records are fetched and prefill the rows, so saving updates them instead of creating duplicates.
 
-**Rapporten** skrivs ut via `window.print()`. Appskalet döljs av `@media print`-regler så att pappret bara innehåller elevens sammanställning.
+**The report** is printed via `window.print()`. The app shell is hidden by `@media print` rules so the paper contains only the student's summary.
 
-**Diagrammen** är ren SVG och CSS i stället för ett diagrambibliotek. Färgerna kommer från MudBlazors palettvariabler, så ljust och mörkt läge följer med utan extra kod.
+**The charts** are plain SVG and CSS rather than a charting library. The colors come from MudBlazor's palette variables, so light and dark mode follow along without extra code.
 
 ---
 
-## Säkerhetskopior
+## Backups
 
-Eftersom datan bara finns i en webbläsare kan läraren exportera den till en krypterad `.edok`-fil.
+Since the data only exists in one browser, the teacher can export it to an encrypted `.edok` file.
 
 ```
-MAGIC "EDOK"(4) | VERSION(1) | SALT(16) | IV(12) | AES-256-GCM-ciphertext
+MAGIC "EDOK"(4) | VERSION(1) | SALT(16) | IV(12) | AES-256-GCM ciphertext
 ```
 
-Nyckeln härleds från lärarens lösenord med PBKDF2-SHA256 och 600 000 iterationer. Lösenordet lagras aldrig någonstans. **Glömt lösenord innebär att kopian är förlorad** — och det ska det göra, annars vore krypteringen teater.
+The key is derived from the teacher's password using PBKDF2-SHA256 with 600,000 iterations. The password is never stored anywhere. **A forgotten password means the backup is lost** — and it should, otherwise the encryption would be theatre.
 
-Appen påminner om att ta en ny kopia när det gått mer än 14 dagar, eller om ingen kopia någonsin tagits.
+The app reminds the user to take a fresh backup after more than 14 days, or if no backup has ever been made.
 
 ---
 
-## Skolverkets API
+## Skolverket's API
 
-Bas: `https://api.skolverket.se/syllabus/v1/`, konfigurerad i `wwwroot/appsettings.json`.
+Base: `https://api.skolverket.se/syllabus/v1/`, configured in `wwwroot/appsettings.json`.
 
-| Anrop | Ger |
+| Call | Returns |
 |---|---|
-| `GET /subjects?schoolType=GR&timespan=LATEST` | 27 grundskoleämnen |
-| `GET /subjects/{code}?timespan=LATEST` | Centralt innehåll och betygskriterier |
+| `GET /subjects?schoolType=GR&timespan=LATEST` | 27 compulsory school subjects |
+| `GET /subjects/{code}?timespan=LATEST` | Central content and grading criteria |
 
-Texterna kommer som HTML med mjuka bindestreck (`\u00AD`) inbakade, vilket ser ut som `an­vän­ds` i rådata och blir oläsligt rakt av i UI. `SyllabusTextService` renskriver: tar bort mjuka bindestreck, avkodar entiteter, delar upp listor till valbara punkter, grupperar dem under närmaste rubrik och filtrerar bort betygsstegen D och B — deras text säger bara att kunskaperna ligger mellan två andra steg, så de går inte att välja som kriterium.
+The texts arrive as HTML with soft hyphens (`\u00AD`) baked in, which looks like `an­vän­ds` in the raw data and is unreadable if rendered as-is. `SyllabusTextService` cleans it up: it strips soft hyphens, decodes entities, splits lists into selectable items, groups them under the nearest heading, and filters out grade steps D and B — their text only states that the knowledge lies between two other steps, so they cannot be picked as a criterion.
 
-Varje lyckat svar cachas i IndexedDB. Vid nätverksfel används den senaste kopian. Ett trasigt nät får aldrig krascha en sida.
+Every successful response is cached in IndexedDB. On a network failure the most recent copy is used. A broken connection must never crash a page.
 
 ---
 
-## Köra lokalt
+## Running locally
 
-Kräver [.NET 10 SDK](https://dotnet.microsoft.com/download).
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
 git clone <repo-url>
@@ -82,56 +82,56 @@ cd Elevkollen
 dotnet run --project Elevkollen.csproj
 ```
 
-Klientprojektet är hela applikationen. Läroplanen hämtas direkt från Skolverket, så en internetanslutning behövs vid första körningen.
+The client project is the entire application. The syllabus is fetched directly from Skolverket, so an internet connection is needed on the first run.
 
-Inloggning i demoläget är `demo` / `demo`.
+Demo sign-in is `demo` / `demo`.
 
 ---
 
 ## Deployment
 
-Projektet publiceras automatiskt till GitHub Pages via `.github/workflows/deploy.yml` vid push till `main`.
+The project is published automatically to GitHub Pages via `.github/workflows/deploy.yml` on every push to `main`.
 
-Tre saker krävs för att en Blazor WebAssembly-app ska fungera på Pages, och workflowen sköter alla:
+Three things are required for a Blazor WebAssembly app to work on Pages, and the workflow handles all of them:
 
-1. `<base href>` skrivs om till repots underkatalog, eftersom sidan ligger på `https://<användare>.github.io/<repo>/` och inte i roten.
-2. `.nojekyll` läggs till, annars filtrerar Jekyll bort `_framework/` — mappar som börjar med understreck ignoreras som standard, och där ligger hela .NET-runtimen.
-3. `index.html` kopieras till `404.html`, så att en direktlänk till `/elever/3` landar hos klientroutern i stället för en felsida.
+1. `<base href>` is rewritten to the repository subdirectory, since the site lives at `https://<user>.github.io/<repo>/` and not at the root.
+2. `.nojekyll` is added, otherwise Jekyll filters out `_framework/` — folders starting with an underscore are ignored by default, and that is where the entire .NET runtime lives.
+3. `index.html` is copied to `404.html`, so a direct link to `/elever/3` lands in the client router instead of an error page.
 
-Aktivera Pages under **Settings → Pages → Source: GitHub Actions**.
+Enable Pages under **Settings → Pages → Source: GitHub Actions**.
 
-`.github/workflows/build.yml` bygger varje pull request utan att deploya.
+`.github/workflows/build.yml` builds every pull request without deploying.
 
 ---
 
-## Arkitektur
+## Architecture
 
 ```
 Elevkollen.slnx
-├── Elevkollen/          Blazor WebAssembly. All UI och all elevdata.
-└── Elevkollen.Shared/   DTO:er och domänhjälpare. Inga beroenden.
+├── Elevkollen/          Blazor WebAssembly. All UI and all student data.
+└── Elevkollen.Shared/   DTOs and domain helpers. No dependencies.
 ```
 
-**Konventioner**
+**Conventions**
 
-- .NET 10, nullable och implicit usings på.
-- MudBlazor till 100 %. Ingen egen CSS där en Mud-komponent räcker.
-- Ingen duplicerad domänlogik. Utvecklingens text och betygssteg bor i `ProgressText`, färgen i `ProgressUi`.
-- All elevdata går via `StudentStore`, som är enda stället som pratar med `js/db.js`.
-- Nya IndexedDB-stores kräver höjd `DB_VERSION` och en **additiv** `onupgradeneeded` som aldrig rör befintlig data.
-- Aggregering görs i ett svep med `ToLookup`/`Dictionary` — datamängden växer med varje termin.
-- Svenska i UI och domänbegrepp, engelska i kod-identifierare.
+- .NET 10, nullable and implicit usings enabled.
+- MudBlazor all the way. No custom CSS where a Mud component is enough.
+- No duplicated domain logic. Progress text and grade steps live in `ProgressText`, the color in `ProgressUi`.
+- All student data goes through `StudentStore`, the only place that talks to `js/db.js`.
+- New IndexedDB stores require a bumped `DB_VERSION` and an **additive** `onupgradeneeded` that never touches existing data.
+- Aggregation is done in a single pass with `ToLookup`/`Dictionary` — the dataset grows every term.
+- Code, comments, documentation and commit messages are in English. Only user-facing UI text is Swedish, since the users are Swedish teachers.
 
-Sortering använder `StringComparer.CurrentCulture` så att å, ä och ö hamnar rätt. Slå därför **inte** på `InvariantGlobalization`.
-
----
-
-## Att göra före skarp drift
-
-Inloggningen är en hårdkodad platshållare i `AuthState`, inte säkerhet. Den håller inte för publik hosting med riktiga elevuppgifter och måste bytas mot verklig autentisering först.
+Sorting uses `StringComparer.CurrentCulture` so that å, ä and ö end up in the right place. Do **not** enable `InvariantGlobalization`.
 
 ---
 
-## Licens
+## Before production use
 
-MIT. Se [LICENSE](LICENSE).
+The sign-in is a hard-coded placeholder in `AuthState`, not security. It does not hold up for public hosting with real student data and must be replaced with real authentication first.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).

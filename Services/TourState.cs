@@ -3,14 +3,14 @@ using Microsoft.JSInterop;
 namespace Elevkollen.Services;
 
 /// <summary>
-/// Håller reda på om användaren har sett introduktionsguiden. Valet sparas i localStorage
-/// och är en ren UI-inställning — ingen persondata är inblandad.
+/// Tracks whether the user has seen the intro tour. The choice is stored in localStorage
+/// and is a pure UI setting — no personal data is involved.
 /// </summary>
 public sealed class TourState(IJSRuntime js)
 {
     private const string StorageKey = "Elevkollen.tour";
 
-    /// <summary>Sant när guiden ska visas, dvs. första besöket i den här webbläsaren.</summary>
+    /// <summary>True when the tour should show, i.e. the first visit in this browser.</summary>
     public bool ShouldShow { get; private set; }
 
     public event Action? Changed;
@@ -21,7 +21,7 @@ public sealed class TourState(IJSRuntime js)
         SetShouldShow(seen != "1");
     }
 
-    /// <summary>Avslutar guiden. <paramref name="remember"/> hindrar den från att visas igen.</summary>
+    /// <summary>Ends the tour. <paramref name="remember"/> stops it from showing again.</summary>
     public async Task CompleteAsync(bool remember)
     {
         if (remember)
@@ -32,7 +32,7 @@ public sealed class TourState(IJSRuntime js)
         SetShouldShow(false);
     }
 
-    /// <summary>Startar guiden på nytt, t.ex. från en hjälpknapp.</summary>
+    /// <summary>Restarts the tour, e.g. from a help button.</summary>
     public async Task RestartAsync()
     {
         await js.InvokeVoidAsync("localStorage.removeItem", StorageKey);

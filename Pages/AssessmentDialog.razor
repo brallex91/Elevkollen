@@ -8,6 +8,7 @@
                         @bind-Date="_date"
                         SchoolYear="SchoolYear"
                         ShowCriterion="false"
+                        @bind-YearSpan="_yearSpan"
                         SyllabusChanged="OnSyllabusChanged" />
 
         @if (_syllabus is not null)
@@ -23,7 +24,7 @@
                 </MudText>
             </MudStack>
 
-            <CriterionRows Rows="_rows" Syllabus="_syllabus" YearSpan="_yearSpan" />
+            <CriterionRows Rows="_rows" Syllabus="_syllabus" YearSpan="@_yearSpan" />
         }
     </DialogContent>
     <DialogActions>
@@ -41,10 +42,10 @@
 
     [Parameter] public int StudentId { get; set; }
 
-    /// <summary>Elevens årskurs, används för att förifylla årskursspannet.</summary>
+    /// <summary>The student's school year, used to preselect the year span.</summary>
     [Parameter] public int? SchoolYear { get; set; }
 
-    /// <summary>Null = ny bedömning.</summary>
+    /// <summary>Null = new assessment.</summary>
     [Parameter] public AssessmentDto? Assessment { get; set; }
 
     private string? _subjectCode;
@@ -58,7 +59,7 @@
 
     private readonly List<CriterionRows.CriterionRow> _rows = [new()];
 
-    /// <summary>Minst en ifylld rad krävs, och ämnet måste vara valt.</summary>
+    /// <summary>At least one completed row is required, and a subject must be selected.</summary>
     private bool CanSave =>
         !_busy
         && !string.IsNullOrWhiteSpace(_subjectCode)
@@ -80,18 +81,17 @@
         }
     }
 
-    private void OnSyllabusChanged((SyllabusDto? Syllabus, string? YearSpan) e)
+    private void OnSyllabusChanged(SyllabusDto? syllabus)
     {
-        _syllabus = e.Syllabus;
-        _yearSpan = e.YearSpan;
+        _syllabus = syllabus;
 
         RestoreExistingCriterion();
         StateHasChanged();
     }
 
     /// <summary>
-    /// Vid redigering är bara kriterietexten sparad. Kriteriet återfinns i läroplanen
-    /// via årskurs och styckeindex, så betygsvalet kan visas som vid nyskapande.
+    /// When editing, only the criterion text is stored. The criterion is found again in the
+    /// syllabus via year and paragraph index, so the grade choice renders as when creating.
     /// </summary>
     private void RestoreExistingCriterion()
     {
@@ -117,7 +117,7 @@
 
         var date = DateOnly.FromDateTime(_date ?? DateTime.Today);
 
-        // Varje kriterium sparas som en egen bedömning, så statistiken blir individuell.
+        // Each criterion is saved as its own assessment, so statistics stay individual.
         var items = _rows
             .Where(r => r.IsComplete)
             .Select(r => (r.Id, new SaveAssessmentRequest(

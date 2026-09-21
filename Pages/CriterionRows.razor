@@ -1,5 +1,5 @@
-@* Kriterieraderna under ett arbetsområde. Varje rad är ett eget betygskriterium
-   med egen betygsättning och egen kommentar, och sparas som en egen bedömning. *@
+@* Criterion rows under one work area. Each row has its own grade step and
+   comment, and is saved as a separate assessment. *@
 
 <MudStack Spacing="3">
     @foreach (var row in Rows)
@@ -22,8 +22,7 @@
 
             <MudGrid Spacing="3">
                 <MudItem xs="12">
-                    <MudAutocomplete T="string" Value="row.CentralContent"
-                                     ValueChanged="@(v => row.CentralContent = v)"
+                    <MudAutocomplete T="string" @bind-Value="row.CentralContent"
                                      SearchFunc="SearchContentAsync" Label="Centralt innehåll"
                                      Variant="Variant.Outlined" Clearable="true" ResetValueOnEmptyText="true"
                                      MaxItems="null" Placeholder="Sök i centralt innehåll"
@@ -50,16 +49,25 @@
                             </MudText>
                         </ItemTemplate>
                     </MudAutocomplete>
+
+                    @if (!HasCriteria)
+                    {
+                        @* An unexplained empty list reads as a broken app. *@
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">
+                            Skolverket har inga betygskriterier för det här ämnet i @SpanLabel.
+                            Betyg sätts först i årskurs 6. Välj centralt innehåll och skriv en
+                            kommentar i stället, eller byt årskursspann.
+                        </MudText>
+                    }
                 </MudItem>
 
                 @if (row.Choice is { } choice)
                 {
                     <MudItem xs="12">
-                        @* Inmatningsfältet är enradigt, så hela kriterietexten visas här. *@
+                        @* The input is single-line, so the full criterion text is shown here. *@
                         <MudPaper Elevation="0" Class="criterion-panel pa-4">
                             <MudText Typo="Typo.caption" Class="mud-text-secondary">@choice.Label</MudText>
                             <MudText Typo="Typo.body2" Class="picker-item mt-1">
-                                @* Visar den valda variantens text, så att värdeorden matchar betygssteget. *@
                                 <CriterionText Criterion="@row.SelectedVariant" Fallback="@choice.Text" />
                             </MudText>
 
@@ -86,7 +94,7 @@
                                     </MudRadio>
                                 }
 
-                                @* Skolverket har ingen kriterietext för F, så alternativet hör hemma här i UI:t. *@
+                                @* Skolverket has no criterion text for F, so the option belongs in the UI. *@
                                 <MudRadio T="string" Value="@ProgressText.NotPassedStep" Dense="true"
                                           Color="Color.Error" Class="criterion-step">
                                     <MudText Typo="Typo.body2">
@@ -117,25 +125,25 @@
 </MudStack>
 
 @code {
-    /// <summary>Raderna som redigeras. Ägs av anroparen så den kan spara dem.</summary>
+    /// <summary>The rows being edited. Owned by the caller so it can save them.</summary>
     [Parameter, EditorRequired] public List<CriterionRow> Rows { get; set; } = [];
 
-    /// <summary>Läroplanen för valt ämne, hämtad av <see cref="SyllabusPicker"/>.</summary>
+    /// <summary>The syllabus for the selected subject, loaded by <see cref="SyllabusPicker"/>.</summary>
     [Parameter] public SyllabusDto? Syllabus { get; set; }
 
-    /// <summary>Valt årskursspann, t.ex. "4-6".</summary>
+    /// <summary>Selected year span, e.g. "4-6".</summary>
     [Parameter] public string? YearSpan { get; set; }
 
     private IReadOnlyList<CriterionChoiceDto>? _choices;
     private SyllabusDto? _builtFor;
 
-    /// <summary>Kriterierna grupperade per årskurs och styckeindex, byggda en gång per läroplan.</summary>
+    /// <summary>Criteria grouped by year and paragraph index, built once per syllabus.</summary>
     private IReadOnlyList<CriterionChoiceDto> Choices
     {
         get
         {
-            // Referensjämförelse: SyllabusDto är en record, så värdelikhet skulle
-            // djupjämföra hela läroplanen vid varje rendering.
+            // Reference check: SyllabusDto is a record, so value equality would deep
+            // compare the whole syllabus on every render.
             if (!ReferenceEquals(_builtFor, Syllabus))
             {
                 _builtFor = Syllabus;
@@ -146,75 +154,60 @@
         }
     }
 
-    /// <summary>Betygskriterier sätts vid slutet av varje spann: 1-3 → åk 3, 4-6 → åk 6, 7-9 → åk 9.</summary>
-    private static int? CriterionYearFor(string? span) => span switch
-    {
-        "1-3" => 3,
-        "4-6" => 6,
-        "7-9" => 9,
-        _ => null,
-    };
+    private bool HasCriteria => Syllabus is null || CriteriaForSpan.Any();
 
-    private Task<IEnumerable<string>> SearchContentAsync(string? text, CancellationToken _)
-    {
-        var items = Syllabus?.CentralContents
+    private string SpanLabel => YearSpan is null ? "valt spann" : $"årskurs {YearSpan}";
+
+    /// <summary>Always scoped to the selected span. Showing the wrong year is worse than showing none.</summary>
+    private IEnumerable<CriterionChoiceDto> CriteriaForSpan =>
+        YearSpans.CriterionYears(YearSpan) is { Length: > 0 } years
+            ? Choices.Where(c => years.Contains(c.Year))
+            : Choices;
+
+    private Task<IEnumerable<string>> SearchContentAsync(string? text, CancellationToken _) =>
+        Task.FromResult(Syllabus?.CentralContents
             .Where(c => c.YearSpan == YearSpan)
             .SelectMany(c => c.Items)
-            .Where(i => string.IsNullOrWhiteSpace(text) || i.Contains(text, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.Ordinal)
-            ?? [];
+            .Where(i => Matches(i, text))
+            .Distinct(StringComparer.Ordinal) ?? []);
 
-        return Task.FromResult(items);
-    }
+    private Task<IEnumerable<CriterionChoiceDto>> SearchCriteriaAsync(string? text, CancellationToken _) =>
+        Task.FromResult(CriteriaForSpan.Where(c => Matches(c.Text, text)));
 
-    private Task<IEnumerable<CriterionChoiceDto>> SearchCriteriaAsync(string? text, CancellationToken _)
-    {
-        var year = CriterionYearFor(YearSpan);
-
-        var items = Choices
-            .Where(c => year is null || c.Year == year)
-            .Where(c => string.IsNullOrWhiteSpace(text) || c.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
-
-        return Task.FromResult(items);
-    }
+    private static bool Matches(string value, string? text) =>
+        string.IsNullOrWhiteSpace(text) || value.Contains(text, StringComparison.OrdinalIgnoreCase);
 
     private string HeadingFor(string item) =>
         Syllabus?.CentralContents.FirstOrDefault(c => c.YearSpan == YearSpan && c.Items.Contains(item))?.Heading ?? "";
 
     /// <summary>
-    /// Årskurs 1 och 3 har bara en variant och får sitt betygssteg direkt.
-    /// I övriga fall väljer läraren steg genom att jämföra värdeorden.
+    /// A single variant means the grade step is implied. Otherwise the teacher picks
+    /// a step by comparing the value words.
     /// </summary>
-    private static void CriterionChanged(CriterionRow row, CriterionChoiceDto? choice)
+    private void CriterionChanged(CriterionRow row, CriterionChoiceDto? choice)
     {
         row.Choice = choice;
 
-        if (choice is null)
+        row.GradeStep = choice switch
         {
-            row.GradeStep = null;
-            return;
-        }
+            null => null,
+            { Variants.Count: 1 } => choice.Variants[0].GradeStep,
+            _ when row.GradeStep == ProgressText.NotPassedStep => row.GradeStep,
+            _ when choice.Variants.Any(v => v.GradeStep == row.GradeStep) => row.GradeStep,
+            _ => null,
+        };
 
-        if (choice.Variants.Count == 1)
-        {
-            row.GradeStep = choice.Variants[0].GradeStep;
-        }
-        else if (row.GradeStep is not null
-            && row.GradeStep != ProgressText.NotPassedStep
-            && !choice.Variants.Any(v => v.GradeStep == row.GradeStep))
-        {
-            row.GradeStep = null;
-        }
+        StateHasChanged();
     }
 
     private void Add() => Rows.Add(new CriterionRow());
 
     private void Remove(CriterionRow row) => Rows.Remove(row);
 
-    /// <summary>En rad under arbetsområdet. Blir en egen bedömning när den sparas.</summary>
+    /// <summary>One row under the work area. Saved as its own assessment.</summary>
     public sealed class CriterionRow
     {
-        /// <summary>Id på den sparade bedömningen, null för en ny rad.</summary>
+        /// <summary>Id of the saved assessment, null for a new row.</summary>
         public int? Id { get; set; }
 
         public string? CentralContent { get; set; }
@@ -222,14 +215,12 @@
         public string? GradeStep { get; set; }
         public string? Comment { get; set; }
 
-        /// <summary>Varianten för valt betygssteg, null innan ett steg valts.</summary>
         public CriterionDto? SelectedVariant =>
             Choice?.Variants.FirstOrDefault(v => v.GradeStep == GradeStep);
 
-        /// <summary>Kriterietexten för valt betygssteg, annars kriteriets bastext.</summary>
+        /// <summary>Text for the selected grade step, otherwise the criterion base text.</summary>
         public string? CriterionText => SelectedVariant?.Text ?? Choice?.Text;
 
-        /// <summary>En rad räknas som ifylld när både kriterium och betygssteg är valda.</summary>
         public bool IsComplete => Choice is not null && GradeStep is not null;
     }
 }

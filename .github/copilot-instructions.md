@@ -1,121 +1,127 @@
-# Elevkollen — Copilot Instructions
+﻿# Elevkollen — Copilot Instructions
 
-## Vad appen är
-Ett verktyg där lärare dokumenterar elevers prestationer. Ersätter den Excel-fil (`Elevdokumentation.xlsx`) som många lärare använder idag. En lärare lägger upp elever, registrerar en eller flera bedömningar per elev kopplade till Skolverkets centrala innehåll och betygskriterier, och följer utvecklingen över tid.
+## What the app is
+A tool where teachers document student performance. It replaces the Excel file (`Elevdokumentation.xlsx`) many teachers use today. A teacher adds students, records one or more assessments per student tied to Skolverket's central content and grading criteria, and follows the progress over time.
 
-## Arkitektur
+## Architecture
 
 ```
 Elevkollen.slnx
-├── Elevkollen/          Blazor WebAssembly (standalone). All UI + all elevdata i IndexedDB.
-└── Elevkollen.Shared/   DTO:er och domänhjälpare. Inga beroenden.
+├── Elevkollen/          Blazor WebAssembly (standalone). All UI + all student data in IndexedDB.
+└── Elevkollen.Shared/   DTOs and domain helpers. No dependencies.
 ```
 
-Det finns **ingen egen server**. Klienten anropar Skolverkets öppna API direkt från webbläsaren och cachar svaren lokalt i IndexedDB.
+There is **no server of our own**. The client calls Skolverket's open API directly from the browser and caches the responses locally in IndexedDB.
 
-### Datakänslighet styr uppdelningen
+### Data sensitivity drives the split
 
-| Var | Innehåll | Persondata |
+| Where | Contents | Personal data |
 |---|---|---|
-| IndexedDB-storarna `students` och `assessments` | Elever, bedömningar | **Ja** |
-| IndexedDB-storen `meta` | Senaste export, cachad läroplan | Nej |
-| Skolverkets API | Läroplanen, hämtas direkt av klienten | Nej |
-| `localStorage` | Inloggning, om guiden är sedd | Nej |
+| IndexedDB stores `students` and `assessments` | Students, assessments | **Yes** |
+| IndexedDB store `meta` | Last export, cached syllabus | No |
+| Skolverket's API | The syllabus, fetched directly by the client | No |
+| `localStorage` | Sign-in, whether the tour has been seen | No |
 
-**All elevdata stannar på enheten.** Den lagras i webbläsarens IndexedDB och skickas aldrig någonstans. Att det inte finns någon backend är hela poängen med GDPR-minimeringen — lägg aldrig till en.
+**All student data stays on the device.** It is stored in the browser's IndexedDB and never sent anywhere. Having no backend is the entire point of the GDPR minimization — never add one.
 
-### Säkerhetskopior
-Eftersom datan bara finns i en webbläsare kan läraren exportera den till en `.edok`-fil (`Pages/Backup.razor` → `Services/BackupService.cs` → `wwwroot/js/crypto.js`).
+### Backups
+Since the data only exists in one browser, the teacher can export it to an `.edok` file (`Pages/Backup.razor` → `Services/BackupService.cs` → `wwwroot/js/crypto.js`).
 
-Filformat: `MAGIC "EDOK"(4) | VERSION(1) | SALT(16) | IV(12) | AES-256-GCM-ciphertext`. Nyckeln härleds från användarens lösenord med PBKDF2-SHA256 och 600 000 iterationer. Höj `VERSION` om formatet ändras, och behåll inläsning av äldre versioner. Lagra aldrig lösenordet någonstans — glömt lösenord innebär att kopian är förlorad, och det ska det göra.
+File format: `MAGIC "EDOK"(4) | VERSION(1) | SALT(16) | IV(12) | AES-256-GCM ciphertext`. The key is derived from the user's password with PBKDF2-SHA256 and 600,000 iterations. Bump `VERSION` if the format changes, and keep reading older versions. Never store the password anywhere — a forgotten password means the backup is lost, and it should.
 
-En lyckad export eller import skriver `lastExport` i `meta`. `MainLayout` visar en påminnelse när det finns elevdata och det gått mer än `BackupService.ReminderAfterDays` (14) dagar, eller om ingen kopia någonsin tagits.
+A successful export or import writes `lastExport` to `meta`. `MainLayout` shows a reminder when student data exists and more than `BackupService.ReminderAfterDays` (14) days have passed, or if no backup has ever been made.
 
-### Sidor och flöden
+### Pages and flows
 
-| Route | Sida | Syfte |
+| Route | Page | Purpose |
 |---|---|---|
-| `/` | `Dashboard.razor` | Startsida: nyckeltal, fördelning, klass- och ämnesdiagram, genvägar |
-| `/elever` | `Students.razor` | Lista, sök och filtrera elever |
-| `/elever/{id}` | `StudentDetail.razor` | Bedömningar och utveckling för en elev |
-| `/elever/{id}/rapport` | `StudentReport.razor` | Utskriftsvänlig sammanställning för utvecklingssamtal |
-| `/klassoversikt` | `ClassOverview.razor` | Matris: elever × arbetsområden, färgad efter senaste bedömning |
-| `/klassbedomning` | `ClassAssessment.razor` | Bedöm hela klassen i ett svep |
-| `/sakerhetskopia` | `Backup.razor` | Krypterad export och import |
+| `/` | `Dashboard.razor` | Dashboard: key figures, distribution, class and subject charts, shortcuts |
+| `/elever` | `Students.razor` | List, search and filter students |
+| `/elever/{id}` | `StudentDetail.razor` | Assessments and progress for one student |
+| `/elever/{id}/rapport` | `StudentReport.razor` | Print-friendly summary for parent-teacher meetings |
+| `/klassoversikt` | `ClassOverview.razor` | Matrix: students × work areas, colored by the latest assessment |
+| `/klassbedomning` | `ClassAssessment.razor` | Assess a whole class in one pass |
+| `/sakerhetskopia` | `Backup.razor` | Encrypted export and import |
 
-**Startsidan** bygger på `StudentStore.GetDashboardAsync()`, som aggregerar all lokal data i ett svep. Diagrammen är ren SVG och CSS (`.dash-*` i `app.css`) i stället för ett diagrambibliotek — färgerna kommer från `--mud-palette-*` så att ljust och mörkt läge följer med.
+**The dashboard** is built on `StudentStore.GetDashboardAsync()`, which aggregates all local data in a single pass. The charts are plain SVG and CSS (`.dash-*` in `app.css`) rather than a charting library — the colors come from `--mud-palette-*` so light and dark mode follow along.
 
-**Klassbeteckning** skrivs alltid via `ClassLabel.For(schoolYear, className)`. Läraren anger årskurs och klassbokstav var för sig, men överallt i UI:t visas de ihop som t.ex. `4B`. `ClassLabel.Normalize` städar inmatningen till versal begynnelsebokstav. Filtreringen i `StudentStore` matchar på samma sammansatta etikett.
+**Class labels** are always rendered via `ClassLabel.For(schoolYear, className)`. The teacher enters the school year and class letter separately, but everywhere in the UI they are shown together, e.g. `4B`. `ClassLabel.Normalize` cleans the input to an uppercase first letter. Filtering in `StudentStore` matches on the same composed label.
 
-**Klassbedömning** identifierar ett bedömningstillfälle som kombinationen ämne + arbetsområde + datum. När något av dem ändras hämtar `SyncExistingAsync` befintliga poster och förifyller raderna, så att spara uppdaterar i stället för att skapa dubbletter. En förifylld rad som avmarkeras tas bort vid spar. Synkningen är sekvensnumrerad (`_syncToken`) eftersom flera fält kan ändras tätt inpå varandra.
+**Class assessment** identifies an occasion as the combination subject + work area + date. When any of them changes, `SyncExistingAsync` fetches existing records and prefills the rows, so saving updates instead of creating duplicates. A prefilled row that is unchecked gets deleted on save. The sync is sequence-numbered (`_syncToken`) because several fields can change in quick succession.
 
-**Rapporten** skrivs ut med `window.print()` via `wwwroot/js/app.js`. Utseendet styrs av `@media print` i `app.css`, som döljer appskalet (`.no-print`, appbar, drawer) och renderar `.report-sheet` svart på vitt. Märk allt som inte hör hemma på papper med `no-print`.
+**The report** is printed with `window.print()` via `wwwroot/js/app.js`. The appearance is controlled by `@media print` in `app.css`, which hides the app shell (`.no-print`, appbar, drawer) and renders `.report-sheet` black on white. Mark anything that does not belong on paper with `no-print`.
 
-**Introduktionsguiden** (`Layout/TourOverlay.razor` + `Services/TourState.cs`) visas vid första besöket och kan startas om från hjälpikonen i appbaren. Den mäter sitt målelement med `window.tourRect` och ritar fyra `.tour-blur`-paneler runt hålet, så att bara det steget handlar om förblir skarpt. `.tour-shield` täcker hela sidan och gör appen oklickbar så länge guiden är igång.
+**The intro tour** (`Layout/TourOverlay.razor` + `Services/TourState.cs`) shows on the first visit and can be restarted from the help icon in the appbar. It measures its target element with `window.tourRect` and draws four `.tour-blur` panels around the hole, so only what the step is about stays sharp. `.tour-shield` covers the whole page and makes the app unclickable while the tour is running.
 
 ### Offline
-`SyllabusClient` cachar varje lyckat läroplanssvar i `meta`. Vid nätverksfel används den senast hämtade kopian och `ServedFromCache` sätts. Ett trasigt nät får aldrig krascha en sida — fallback är tom lista respektive `null`.
+`SyllabusClient` caches every successful syllabus response in `meta`. On a network failure the most recently fetched copy is used and `ServedFromCache` is set. A broken connection must never crash a page — the fallback is an empty list or `null` respectively.
 
-### Köra lokalt
-Starta klientprojektet — det är hela applikationen. Läroplanen hämtas direkt från Skolverket via `Syllabus:BaseUrl` i `wwwroot/appsettings.json`.
+### Running locally
+Start the client project — it is the entire application. The syllabus is fetched directly from Skolverket via `Syllabus:BaseUrl` in `wwwroot/appsettings.json`.
 
-## Konventioner
+## Conventions
 
-- **.NET 10**, `Nullable` och `ImplicitUsings` på i båda projekten.
-- **MudBlazor till 100%.** Ingen egen CSS om en Mud-komponent finns. Ingen Bootstrap.
-- **Less is more.** Färre filer > fler filer. Lägg relaterad logik tillsammans. Skapa inte ett interface för något som har en enda implementation.
-- **Ingen duplicerad domänlogik.** Utvecklingens text, symbol och betygsstegen finns i `ProgressText` (delat) och färgen i `Layout/ProgressUi.cs` (MudBlazor-beroende). Kopiera aldrig tillbaka dem in i en sida.
-- **IndexedDB**: all elevdata går via `StudentStore`, som är enda stället som anropar `js/db.js` för elever och bedömningar. Statistik beräknas på klienten. Nya fält läggs till i både JS-modulen och `StudentStore`. Nya stores kräver höjd `DB_VERSION` och en **additiv** `onupgradeneeded` som aldrig rör befintlig data.
-- **Aggregering görs i ett svep.** Bygg `ToLookup`/`Dictionary` en gång i stället för att filtrera bedömningslistan inuti en `Select` över elever — datamängden växer med varje termin.
-- **DTO:er är `record`s** och bor allihop i `Elevkollen.Shared/Contracts.cs`.
-- `sealed` som standard på klasser. Primary constructors där det passar.
-- Svenska i UI-text och domänbegrepp, engelska i kod-identifierare.
+- **.NET 10**, `Nullable` and `ImplicitUsings` enabled in both projects.
+- **MudBlazor all the way.** No custom CSS if a Mud component exists. No Bootstrap.
+- **Less is more.** Fewer files > more files. Keep related logic together. Do not create an interface for something with a single implementation.
+- **No duplicated domain logic.** The progress text, symbol and grade steps live in `ProgressText` (shared) and the color in `Layout/ProgressUi.cs` (MudBlazor-dependent). Never copy them back into a page.
+- **Year spans** are mapped in one place: `YearSpans` in `Elevkollen.Shared/Contracts.cs`. Never re-derive span or criterion-year logic in a component.
+- **IndexedDB**: all student data goes through `StudentStore`, the only place that calls `js/db.js` for students and assessments. Statistics are computed on the client. New fields are added in both the JS module and `StudentStore`. New stores require a bumped `DB_VERSION` and an **additive** `onupgradeneeded` that never touches existing data.
+- **Aggregation is done in a single pass.** Build a `ToLookup`/`Dictionary` once instead of filtering the assessment list inside a `Select` over students — the dataset grows every term.
+- **DTOs are `record`s** and all live in `Elevkollen.Shared/Contracts.cs`.
+- `sealed` by default on classes. Primary constructors where they fit.
 
-### Språk
-**Allt användarsynligt innehåll är på svenska** — sidor, knappar, dialoger, felmeddelanden och introduktionsguiden. Ingen engelsk UI-text. Kod, kommentarer och commit-meddelanden skrivs också på svenska.
+### Language
+**Everything except user-facing UI text is in English** — code identifiers, comments, XML docs, documentation and commit messages. Do not write Swedish comments.
 
-Sortering av namn, klasser och ämnen använder `StringComparer.CurrentCulture` så att å, ä och ö hamnar rätt. Slå därför **inte** på `InvariantGlobalization`.
+**All user-visible content is in Swedish** — pages, buttons, dialogs, error messages and the intro tour, since the users are Swedish teachers. No English UI text. Routes and domain terms shown to the user stay Swedish as well.
 
-## Skolverkets API
+Sorting of names, classes and subjects uses `StringComparer.CurrentCulture` so that å, ä and ö end up in the right place. Therefore do **not** enable `InvariantGlobalization`.
 
-Bas: `https://api.skolverket.se/syllabus/v1/` (konfigureras i `wwwroot/appsettings.json`).
+## Skolverket's API
 
-| Anrop | Ger |
+Base: `https://api.skolverket.se/syllabus/v1/` (configured in `wwwroot/appsettings.json`).
+
+| Call | Returns |
 |---|---|
-| `GET /subjects?schoolType=GR&timespan=LATEST` | 27 grundskoleämnen, `GRGRMAT01` = Matematik |
+| `GET /subjects?schoolType=GR&timespan=LATEST` | 27 compulsory school subjects, `GRGRMAT01` = Matematik |
 | `GET /subjects/{code}?timespan=LATEST` | `centralContents[]` + `knowledgeRequirements[]` |
 
-- `centralContents[]` → `{ text, year }` där `year` är `"1-3"`, `"4-6"` eller `"7-9"`.
-- `knowledgeRequirements[]` → `{ text, year, gradeStep }`, `year` = `3`/`6`/`9`, `gradeStep` = `E`/`D`/`C`/`B`/`A`.
+- `centralContents[]` → `{ text, year }` where `year` is `"1-3"`, `"4-6"` or `"7-9"`.
+- `knowledgeRequirements[]` → `{ text, year, gradeStep }`, `year` = `1`/`3`/`6`/`9`, `gradeStep` = `E`/`D`/`C`/`B`/`A`.
 
-### Varför renskrivning behövs
-`text` är **HTML** (`<h3>`, `<h4>`, `<ul><li>`, `<strong>`) och innehåller **mjuka bindestreck** (`\u00AD`) som ser ut så här i rådata: `an­vän­ds`. Rakt av i UI blir det oläsligt. `SyllabusTextService` ansvarar för att:
+Note that criteria are not published for every year in every subject. A `1-3` span must therefore accept both year `1` and year `3`; `YearSpans.CriterionYears` owns that rule.
 
-1. Ta bort mjuka bindestreck (`\u00AD`) och `&shy;`.
-2. Avkoda HTML-entiteter.
-3. Dela upp `<ul><li>`-listor till enskilda valbara punkter.
-4. Gruppera punkter under närmast föregående `<h4>`-rubrik.
-5. Filtrera bort betygsstegen **D** och **B** — deras text är bara "Elevens kunskaper bedöms sammantaget vara mellan C och E" och de går inte att välja som kriterium.
+### Why cleanup is needed
+`text` is **HTML** (`<h3>`, `<h4>`, `<ul><li>`, `<strong>`) and contains **soft hyphens** (`\u00AD`) that look like this in the raw data: `an­van­ds`. Rendered as-is in the UI it is unreadable. `SyllabusTextService` is responsible for:
 
-`SyllabusTextService` är en ren statisk klass utan DI, så den är enkel att enhetstesta.
+1. Stripping soft hyphens (`\u00AD`) and `&shy;`.
+2. Decoding HTML entities.
+3. Splitting `<ul><li>` lists into individual selectable items.
+4. Grouping items under the nearest preceding `<h4>` heading.
+5. Filtering out grade steps **D** and **B** — their text only says the student's knowledge is judged overall to be between two other steps, so they cannot be picked as a criterion.
+6. Preserving the value words in `<strong>` as bold segments, since they are the only thing that distinguishes one grade step from another.
+
+`SyllabusTextService` is a plain static class without DI, so it is easy to unit test.
 
 ## Cache busting
-Använd .NET 10:s inbyggda fingerprinting — bygg inget eget versionsschema.
+Use .NET 10's built-in fingerprinting — do not build a custom versioning scheme.
 
-- `index.html` refererar `blazor.webassembly#[.{fingerprint}].js`.
-- `OverrideHtmlAssetPlaceholders` är satt i `Elevkollen.csproj`.
+- `index.html` references `blazor.webassembly#[.{fingerprint}].js`.
+- `OverrideHtmlAssetPlaceholders` is set in `Elevkollen.csproj`.
 
-## Autentisering
-Hårdkodat `demo`/`demo` i **en** konstant i `AuthState`. Detta är en platshållare, inte säkerhet — all data ligger ändå lokalt i webbläsaren. Måste bytas mot riktig auth innan hosting.
+## Authentication
+Hard-coded `demo`/`demo` in **one** constant in `AuthState`. This is a placeholder, not security — all data lives locally in the browser anyway. It must be replaced with real auth before hosting.
 
-## Domänordlista
+## Domain glossary
 
-| Svenska | Kod | Betydelse |
+| Swedish (UI) | Code | Meaning |
 |---|---|---|
 | Ämne | `Subject` | Matematik, Svenska, ... |
-| Centralt innehåll | `CentralContent` | Vad undervisningen ska behandla |
-| Betygskriterier | `GradingCriterion` | Krav för ett visst betygssteg |
+| Centralt innehåll | `CentralContent` | What the teaching must cover |
+| Betygskriterier | `GradingCriterion` | Requirements for a given grade step |
 | Betygssteg | `GradeStep` | A–F |
-| Arbetsområde | `WorkArea` | Lärarens eget moment, t.ex. "Bråk och procent" |
-| Bedömning | `Assessment` | En elevs prestation vid ett tillfälle |
+| Arbetsområde | `WorkArea` | The teacher's own unit, e.g. "Bråk och procent" |
+| Bedömning | `Assessment` | A student's performance on one occasion |
 | Elevens utveckling | `Progress` | Ej uppnått / Pågående / Uppnått |
+| Årskursspann | `YearSpan` | `1-3`, `4-6`, `7-9` |

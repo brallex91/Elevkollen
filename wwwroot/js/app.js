@@ -1,7 +1,7 @@
-// Små globala hjälpare. Håll den här filen tunn — logiken hör hemma i C#.
+// Small global helpers. Keep this file thin — the logic belongs in C#.
 window.appPrint = () => window.print();
 
-// Guiden behöver veta var elementet den pratar om ligger, så att resten kan suddas.
+// The tour needs to know where its target sits, so everything else can be blurred.
 window.tourRect = (selector) => {
     const el = selector && document.querySelector(selector);
     if (!el) {

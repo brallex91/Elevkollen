@@ -71,7 +71,7 @@ else
                 }
                 else
                 {
-                    @* En enkel donut i ren SVG — inga extra beroenden och full kontroll på färgerna. *@
+                    @* A simple donut in plain SVG — no extra dependencies and full control of the colors. *@
                     <div class="d-flex justify-center mb-6">
                         <svg viewBox="0 0 42 42" width="200" height="200" role="img" aria-label="Fördelning">
                             <circle cx="21" cy="21" r="15.915" fill="none"
@@ -238,7 +238,7 @@ else
         ("Senaste 30 dagarna", d.AssessmentsLast30Days.ToString(), Icons.Material.Filled.TrendingUp, Color.Success),
     ];
 
-    /// <summary>Färgerna hämtas från temat så att diagrammen följer ljust och mörkt läge.</summary>
+    /// <summary>Colors come from the theme so the charts follow light and dark mode.</summary>
     private static (string Label, double Share, string Stroke)[] Shares(DashboardDto d) =>
     [
         (Progress.Achieved.Label(), d.AchievedShare, "var(--mud-palette-success)"),

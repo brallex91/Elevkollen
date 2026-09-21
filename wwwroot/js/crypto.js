@@ -1,5 +1,5 @@
-// Kryptering av säkerhetskopior. Allt sker lokalt i webbläsaren via WebCrypto.
-// Nyckeln härleds från användarens lösenord — utan lösenordet är filen inte läsbar.
+// Backup encryption. Everything happens locally in the browser via WebCrypto.
+// The key is derived from the user's password — without it the file is unreadable.
 
 const MAGIC = [0x45, 0x44, 0x4f, 0x4b]; // "EDOK"
 const VERSION = 1;
@@ -44,8 +44,8 @@ export async function exportEncrypted(json, password, fileName) {
     URL.revokeObjectURL(url);
 }
 
-/// Läser vald fil och returnerar dekrypterad JSON.
-/// Kastar 'FORMAT', 'VERSION' eller 'PASSWORD' så att UI:t kan ge ett begripligt besked.
+/// Reads the selected file and returns decrypted JSON.
+/// Throws 'FORMAT', 'VERSION' or 'PASSWORD' so the UI can give an understandable message.
 export async function importEncrypted(inputElement, password) {
     const file = inputElement?.files?.[0];
     if (!file) {
@@ -73,12 +73,12 @@ export async function importEncrypted(inputElement, password) {
         const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
         return new TextDecoder().decode(plain);
     } catch {
-        // AES-GCM verifierar integriteten, så fel lösenord och manipulerad fil ser likadana ut.
+        // AES-GCM verifies integrity, so a wrong password and a tampered file look the same.
         throw new Error('PASSWORD');
     }
 }
 
-/// Starkt slumpat lösenord som läraren kan spara i sin lösenordshanterare.
+/// A strong random password the teacher can store in their password manager.
 export function suggestPassword() {
     const alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     return [...crypto.getRandomValues(new Uint8Array(24))]

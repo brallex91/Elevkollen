@@ -3,18 +3,18 @@ using Microsoft.JSInterop;
 
 namespace Elevkollen.Services;
 
-/// <summary>Fel som går att förklara för användaren utan teknisk jargong.</summary>
+/// <summary>An error that can be explained to the user without technical jargon.</summary>
 public sealed class BackupException(string message) : Exception(message);
 
 /// <summary>
-/// Krypterad säkerhetskopia av all elevdata. Filen krypteras med AES-256-GCM där nyckeln
-/// härleds från användarens lösenord — utan lösenordet går den inte att läsa i något program.
+/// Encrypted backup of all student data. The file is encrypted with AES-256-GCM using a
+/// key derived from the user's password — without the password no program can read it.
 /// </summary>
 public sealed class BackupService(IJSRuntime js) : IAsyncDisposable
 {
     private const string LastExportKey = "lastExport";
 
-    /// <summary>Efter så här många dagar utan export påminner appen om att ta en kopia.</summary>
+    /// <summary>After this many days without an export the app reminds the user to back up.</summary>
     public const int ReminderAfterDays = 14;
 
     private IJSObjectReference? _db;
@@ -51,7 +51,7 @@ public sealed class BackupService(IJSRuntime js) : IAsyncDisposable
         await db.InvokeVoidAsync("setMeta", LastExportKey, DateTime.Today.ToString("O"));
     }
 
-    /// <summary>Antal dagar sedan senaste export, eller null om ingen export gjorts.</summary>
+    /// <summary>Days since the last export, or null if no export has been made.</summary>
     public async Task<int?> DaysSinceExportAsync()
     {
         var db = await DbAsync();
@@ -85,7 +85,7 @@ public sealed class BackupService(IJSRuntime js) : IAsyncDisposable
         try
         {
             var result = await db.InvokeAsync<Counts>("importAll", json);
-            // Datan kommer från en fil som användaren redan har, så den räknas som säkerhetskopierad.
+            // The data comes from a file the user already has, so it counts as backed up.
             await db.InvokeVoidAsync("setMeta", LastExportKey, DateTime.Today.ToString("O"));
             return (result.Students, result.Assessments);
         }
@@ -119,7 +119,7 @@ public sealed class BackupService(IJSRuntime js) : IAsyncDisposable
                 }
                 catch (JSDisconnectedException)
                 {
-                    // Sidan är redan stängd — inget att städa.
+                    // The page is already closed — nothing to clean up.
                 }
             }
         }

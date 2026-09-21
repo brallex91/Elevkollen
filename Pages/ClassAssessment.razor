@@ -23,7 +23,7 @@
                     @bind-Date="_date"
                     @bind-Date:after="SyncExistingAsync"
                     SchoolYear="_schoolYear"
-                    GradeStep="_suggestedGradeStep"
+                    GradeStep="@_suggestedGradeStep"
                     GradeStepChanged="OnGradeStepSuggested" />
 </MudCard>
 
@@ -136,7 +136,7 @@
 </MudCard>
 
 @code {
-    /// <summary>En rad per elev. Progress = null betyder att eleven hoppas över.</summary>
+    /// <summary>One row per student. Progress = null means the student is skipped.</summary>
     private sealed class Row(StudentDto student)
     {
         public StudentDto Student { get; } = student;
@@ -144,7 +144,7 @@
         public string? GradeStep { get; set; }
         public string? Comment { get; set; }
 
-        /// <summary>Satt när raden motsvarar en redan sparad bedömning för samma tillfälle.</summary>
+        /// <summary>Set when the row matches an already saved assessment for the same occasion.</summary>
         public int? AssessmentId { get; set; }
     }
 
@@ -162,7 +162,7 @@
     private bool _busy;
     private int _syncToken;
 
-    /// <summary>Klassens årskurs — den vanligaste bland de visade eleverna.</summary>
+    /// <summary>The class's school year — the most common one among the listed students.</summary>
     private int? _schoolYear => _rows
         .Select(r => r.Student.SchoolYear)
         .Where(y => y is not null)
@@ -174,7 +174,7 @@
 
     private int _existing => _rows.Count(r => r.Progress is not null && r.AssessmentId is not null);
 
-    /// <summary>Sparade rader som avmarkerats tas bort när man sparar.</summary>
+    /// <summary>Saved rows that are unchecked get deleted on save.</summary>
     private int _removed => _rows.Count(r => r.Progress is null && r.AssessmentId is not null);
 
     private string SaveLabel => _selected > 0
@@ -197,13 +197,13 @@
     }
 
     /// <summary>
-    /// Hämtar bedömningar som redan finns för valt ämne, arbetsområde och datum och förifyller raderna,
-    /// så att ett nytt spar uppdaterar dem i stället för att skapa dubbletter.
+    /// Fetches assessments that already exist for the selected subject, work area and date and
+    /// prefills the rows, so a new save updates them instead of creating duplicates.
     /// </summary>
     private async Task SyncExistingAsync()
     {
-        // Ämne, arbetsområde och datum kan ändras tätt inpå varandra. Bara det senaste
-        // anropet får skriva till raderna, annars kan ett äldre svar nolla förifyllningen.
+        // Subject, work area and date can change in quick succession. Only the latest call
+        // may write to the rows, or an older response could wipe the prefill.
         var token = ++_syncToken;
 
         var subjectCode = _subjectCode;
@@ -232,7 +232,7 @@
             }
             else if (row.AssessmentId is not null)
             {
-                // Raden hörde till ett annat tillfälle och ska inte längre vara förifylld.
+                // The row belonged to a different occasion and should no longer be prefilled.
                 row.AssessmentId = null;
                 row.Progress = null;
                 row.GradeStep = null;
@@ -243,7 +243,7 @@
         StateHasChanged();
     }
 
-    /// <summary>Kriteriets betygssteg förifylls på elever som redan är markerade.</summary>
+    /// <summary>The criterion's grade step is prefilled on students already checked.</summary>
     private void OnGradeStepSuggested(string? step)
     {
         _suggestedGradeStep = step;

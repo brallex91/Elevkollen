@@ -4,8 +4,8 @@ using Elevkollen.Shared;
 namespace Elevkollen.Services;
 
 /// <summary>
-/// All elevdata lagras lokalt i webbläsarens IndexedDB och lämnar aldrig enheten.
-/// Statistiken beräknas här på klienten.
+/// All student data is stored locally in the browser's IndexedDB and never leaves the
+/// device. Statistics are computed here on the client.
 /// </summary>
 public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
 {
@@ -14,7 +14,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
     private async ValueTask<IJSObjectReference> DbAsync() =>
         _db ??= await js.InvokeAsync<IJSObjectReference>("import", "./js/db.js");
 
-    // ---------- Elever ----------
+    // ---------- Students ----------
 
     public async Task<IReadOnlyList<StudentDto>> GetStudentsAsync(string? search = null, string? className = null)
     {
@@ -37,7 +37,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
             query = query.Where(x => ClassLabel.For(x.SchoolYear, x.ClassName) == className);
         }
 
-        // En lookup byggd en gång, i stället för att söka igenom alla bedömningar per elev.
+        // A lookup built once, rather than scanning all assessments per student.
         var byStudent = assessments.ToLookup(a => a.StudentId);
 
         return [.. query
@@ -110,7 +110,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
         await db.InvokeVoidAsync("deleteStudent", id);
     }
 
-    // ---------- Bedömningar ----------
+    // ---------- Assessments ----------
 
     public async Task CreateAssessmentAsync(SaveAssessmentRequest req)
     {
@@ -119,8 +119,8 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sparar en blandning av nya och redan sparade bedömningar i en transaktion.
-    /// Id som är null skapar en ny post, övriga uppdaterar den befintliga.
+    /// Saves a mix of new and already saved assessments in one transaction.
+    /// A null id creates a new record, others update the existing one.
     /// </summary>
     public async Task<int> SaveAssessmentsAsync(IReadOnlyList<(int? Id, SaveAssessmentRequest Request)> items)
     {
@@ -157,7 +157,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
         await db.InvokeVoidAsync("deleteAssessments", [ids.ToArray()]);
     }
 
-    /// <summary>Bedömningar från samma tillfälle: ämne + arbetsområde + datum.</summary>
+    /// <summary>Assessments from the same occasion: subject + work area + date.</summary>
     public async Task<IReadOnlyList<AssessmentDto>> FindAssessmentsAsync(
         string subjectCode, string? workArea, DateOnly date)
     {
@@ -167,11 +167,11 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
         return [.. items.Select(ToDto)];
     }
 
-    // ---------- Klassöversikt ----------
+    // ---------- Class overview ----------
 
     /// <summary>
-    /// Matris för en klass. Kolumnerna är de arbetsområden som faktiskt bedömts,
-    /// och varje cell visar elevens senaste utveckling inom området.
+    /// Matrix for a class. The columns are the work areas actually assessed, and each
+    /// cell shows the student's latest progress within that area.
     /// </summary>
     public async Task<ClassOverviewDto> GetClassOverviewAsync(string? className, string? subjectCode = null)
     {
@@ -204,7 +204,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
             .Select(x => x.Column)
             .ToArray();
 
-        // Bara senaste bedömningen och antalet behövs per cell, så vi slipper sortera varje grupp.
+        // Only the latest assessment and the count are needed per cell, so we avoid sorting each group.
         var byKey = relevant
             .GroupBy(a => (a.StudentId, a.SubjectCode, Area: a.WorkArea ?? "Övrigt"))
             .ToDictionary(
@@ -224,8 +224,8 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Ämnen som faktiskt har bedömts, för filterlistor. Betydligt billigare än att
-    /// bygga hela klassmatrisen bara för att få fram namnen.
+    /// Subjects actually assessed, for filter lists. Considerably cheaper than building
+    /// the whole class matrix just to get the names.
     /// </summary>
     public async Task<IReadOnlyList<SubjectDto>> GetAssessedSubjectsAsync()
     {
@@ -239,9 +239,9 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
     }
 
     /// <summary>
-    /// De centrala innehåll som faktiskt bedömts i ett ämne, för täckningsgraden.
-    /// Filtreras på klass när en sådan anges. Returnerar bara distinkta texter — vem
-    /// som bedömts spelar ingen roll, en punkt räknas som täckt vid första bedömningen.
+    /// The central content actually assessed in a subject, for the coverage view.
+    /// Filtered by class when one is given. Returns only distinct texts — who was
+    /// assessed does not matter, an item counts as covered at the first assessment.
     /// </summary>
     public async Task<IReadOnlyList<string>> GetAssessedContentsAsync(string subjectCode, string? className = null)
     {
@@ -269,8 +269,8 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
             .Distinct(StringComparer.Ordinal)];
     }
 
-    // ---------- Startsida ----------
-    /// <summary>Sammanställning för startsidan: nyckeltal, fördelning per klass och ämne.</summary>
+    // ---------- Dashboard ----------
+    /// <summary>Aggregate for the dashboard: key figures, distribution per class and subject.</summary>
     public async Task<DashboardDto> GetDashboardAsync()
     {
         var db = await DbAsync();
@@ -352,7 +352,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
     private static double Share(IReadOnlyCollection<AssessmentRecord> items, Progress progress) =>
         items.Count == 0 ? 0 : 100.0 * items.Count(a => a.Progress == progress) / items.Count;
 
-    // ---------- Statistik ----------
+    // ---------- Statistics ----------
 
     public async Task<StudentStatsDto?> GetStatsAsync(int id)
     {
@@ -369,7 +369,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
                 g.Count(a => a.Progress == Progress.Achieved),
                 g.Count(a => a.Progress == Progress.InProgress),
                 g.Count(a => a.Progress == Progress.NotAchieved),
-                // ordered är redan stigande på datum, så sista träffen är den senaste.
+                // ordered is already ascending by date, so the last hit is the most recent.
                 g.LastOrDefault(a => a.GradeStep is not null)?.GradeStep))
             .OrderBy(s => s.SubjectName, StringComparer.CurrentCulture)
             .ToArray();
@@ -391,7 +391,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
             }
             catch (JSDisconnectedException)
             {
-                // Sidan är redan stängd — inget att städa.
+                // The page is already closed — nothing to clean up.
             }
         }
     }
@@ -406,7 +406,7 @@ public sealed class StudentStore(IJSRuntime js) : IAsyncDisposable
         r.GradingCriterion, r.GradeStep, r.Progress, r.Comment, r.Date,
         r.CriterionYear, r.CriterionIndex);
 
-    /// <summary>Id är null vid nyskapande så att IndexedDB tilldelar nyckeln.</summary>
+    /// <summary>Id is null on create so IndexedDB assigns the key.</summary>
     private sealed record StudentRecord(
         int? Id,
         string Name,

@@ -4,26 +4,26 @@ using System.Text.RegularExpressions;
 namespace Elevkollen.Services;
 
 /// <summary>
-/// Renskriver Skolverkets HTML-texter till ren, valbar text.
+/// Cleans up Skolverket's HTML texts into plain, selectable text.
 ///
-/// Rådata ser ut så här:
+/// Raw data looks like this:
 ///   &lt;h3&gt;I årskurs 4-6&lt;/h3&gt;&lt;h4&gt;Algebra&lt;/h4&gt;&lt;ul&gt;&lt;li&gt;Punkt...&lt;/li&gt;&lt;/ul&gt;
-/// och innehåller mjuka bindestreck (\u00AD) som gör texten oläslig i UI.
+/// and contains soft hyphens (\u00AD) that make the text unreadable in the UI.
 ///
-/// Ren statisk klass utan DI — enkel att enhetstesta.
+/// Pure static class without DI — easy to unit test.
 /// </summary>
 public static partial class SyllabusTextService
 {
     private const char SoftHyphen = '\u00AD';
 
     /// <summary>
-    /// Betygssteg som går att välja. D och B saknar eget innehåll ("mellan C och E").
-    /// Tomt steg förekommer i årskurs 1 och 3 ("godtagbara kunskaper") och är giltigt.
+    /// Selectable grade steps. D and B have no content of their own ("between C and E").
+    /// An empty step occurs in years 1 and 3 ("godtagbara kunskaper") and is valid.
     /// </summary>
     public static bool IsSelectableGradeStep(string? gradeStep) =>
         string.IsNullOrWhiteSpace(gradeStep) || gradeStep is "E" or "C" or "A";
 
-    /// <summary>Tar bort taggar, mjuka bindestreck och entiteter. Returnerar en rad ren text.</summary>
+    /// <summary>Strips tags, soft hyphens and entities. Returns a single line of plain text.</summary>
     public static string Clean(string? html)
     {
         if (string.IsNullOrWhiteSpace(html))
@@ -38,8 +38,8 @@ public static partial class SyllabusTextService
     }
 
     /// <summary>
-    /// Delar upp centralt innehåll i punkter grupperade under närmast föregående h4-rubrik.
-    /// Punkter utan rubrik hamnar under "Övrigt".
+    /// Splits central content into items grouped under the nearest preceding h4 heading.
+    /// Items without a heading end up under "Övrigt".
     /// </summary>
     public static IReadOnlyList<(string Heading, IReadOnlyList<string> Items)> SplitCentralContent(string? html)
     {
@@ -83,21 +83,21 @@ public static partial class SyllabusTextService
     }
 
     /// <summary>
-    /// Plockar bort den inledande h3-rubriken ("Betygskriterier för betyget E...")
-    /// eftersom ämne och betygssteg redan visas separat i UI.
+    /// Removes the leading h3 heading ("Betygskriterier för betyget E...") since subject
+    /// and grade step are already shown separately in the UI.
     /// </summary>
     public static string CleanCriterion(string? html) =>
         Clean(LeadingHeadingRegex().Replace(html ?? "", ""));
 
     /// <summary>
-    /// Delar upp ett betygskriterium i de enskilda kriterier som Skolverket
-    /// avgränsar med &lt;p&gt;, och plockar ut värdeorden ur &lt;strong&gt;.
+    /// Splits a grading criterion into the individual criteria Skolverket delimits with
+    /// &lt;p&gt;, and extracts the value words from &lt;strong&gt;.
     ///
-    /// Värdeorden är de enda orden som skiljer samma kriterium mellan betygsstegen,
-    /// t.ex. "på ett fungerande sätt" (E) mot "med god säkerhet" (A).
+    /// The value words are the only words separating the same criterion between grade
+    /// steps, e.g. "på ett fungerande sätt" (E) versus "med god säkerhet" (A).
     ///
-    /// Saknas &lt;p&gt; helt behandlas hela texten som ett enda kriterium, så att
-    /// framtida läroplaner med annan styckeindelning fortfarande ger något användbart.
+    /// With no &lt;p&gt; at all the whole text is treated as one criterion, so future
+    /// syllabuses with different paragraphing still yield something usable.
     /// </summary>
     public static IReadOnlyList<(string Text, IReadOnlyList<string> ValueWords)> SplitCriteria(string? html)
     {
@@ -134,9 +134,9 @@ public static partial class SyllabusTextService
     }
 
     /// <summary>
-    /// Plockar ut värdeorden ur &lt;strong&gt;. Skolverket delar ibland ett värdeord
-    /// över flera taggar ("&lt;strong&gt;väl&lt;/strong&gt; &lt;strong&gt;fungerande&lt;/strong&gt;),
-    /// så intilliggande fragment slås ihop till ett uttryck.
+    /// Extracts value words from &lt;strong&gt;. Skolverket sometimes splits one value word
+    /// across several tags ("&lt;strong&gt;väl&lt;/strong&gt; &lt;strong&gt;fungerande&lt;/strong&gt;),
+    /// so adjacent fragments are merged into one phrase.
     /// </summary>
     private static IReadOnlyList<string> ExtractValueWords(string html)
     {
@@ -151,7 +151,7 @@ public static partial class SyllabusTextService
                 continue;
             }
 
-            // Bara blanktecken mellan förra taggen och denna => samma uttryck.
+            // Only whitespace between the previous tag and this one => same phrase.
             var joinable = end >= 0
                 && words.Count > 0
                 && string.IsNullOrWhiteSpace(html[end..m.Index]);

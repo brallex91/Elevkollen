@@ -177,7 +177,7 @@ else
         _loading = false;
     }
 
-    /// <summary>En linje per ämne, med utvecklingen (0-2) per bedömningsdatum.</summary>
+    /// <summary>One line per subject, with progress (0-2) per assessment date.</summary>
     private void BuildChart()
     {
         if (_stats is null || _stats.Timeline.Count == 0)
@@ -190,8 +190,8 @@ else
         var dates = _stats.Timeline.Select(p => p.Date).Distinct().Order().ToArray();
         _labels = [.. dates.Select(d => d.ToString("MM-dd"))];
 
-        // Tidslinjen kommer redan sorterad på datum, så varje serie byggs i ett svep:
-        // vi går framåt genom datumen och behåller det senast kända värdet.
+        // The timeline arrives sorted by date, so each series is built in one pass:
+        // we walk forward through the dates and keep the last known value.
         _series = [.. _stats.Timeline
             .GroupBy(p => p.SubjectName)
             .Select(g =>

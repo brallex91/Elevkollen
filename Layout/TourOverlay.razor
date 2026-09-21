@@ -3,14 +3,14 @@
 @inject IJSRuntime Js
 @implements IDisposable
 
-@* Introduktionsguide vid första besöket. Texten är medvetet kort — bara de breda dragen. *@
+@* Intro tour on the first visit. The text is deliberately short — broad strokes only. *@
 
 @if (_visible)
 {
-    @* En heltäckande, osynlig sköld låser appen medan guiden är igång. *@
+    @* A full-page invisible shield locks the app while the tour is running. *@
     <div class="tour-shield"></div>
 
-    @* Fyra paneler runt hålet: allt suddas utom det steget faktiskt handlar om. *@
+    @* Four panels around the hole: everything blurs except what the step is about. *@
     @foreach (var panel in Panels())
     {
         <div class="tour-blur" style="@panel"></div>
@@ -62,7 +62,7 @@
 }
 
 @code {
-    /// <summary>Target är CSS-selektorn för det som ska förbli skarpt under steget.</summary>
+    /// <summary>Target is the CSS selector for what stays sharp during the step.</summary>
     private sealed record Step(string Title, string Body, string Icon, string? Route, string? Target);
 
     private sealed record Rect(
@@ -144,7 +144,7 @@
         StateHasChanged();
     }
 
-    /// <summary>Mäter det aktuella målet så att hålet hamnar rätt även efter navigering.</summary>
+    /// <summary>Measures the current target so the hole lands right even after navigation.</summary>
     private async Task MeasureAsync()
     {
         Rect? rect = null;
@@ -157,7 +157,7 @@
             }
             catch (JSException)
             {
-                // Saknas elementet suddar vi hela sidan i stället — guiden får aldrig krascha.
+                // If the element is missing we blur the whole page instead — the tour must never crash.
             }
         }
 
@@ -177,7 +177,7 @@
         _index = index;
         _hole = null;
 
-        // Visa sidan som steget handlar om, så guiden känns förankrad i appen.
+        // Show the page the step is about, so the tour feels anchored in the app.
         if (Current.Route is { } route)
         {
             Nav.NavigateTo(route);
@@ -197,7 +197,7 @@
         Nav.NavigateTo("");
     }
 
-    /// <summary>Panelerna ovanför, under, till vänster och höger om hålet.</summary>
+    /// <summary>The panels above, below, left and right of the hole.</summary>
     private IEnumerable<string> Panels()
     {
         if (_hole is not { } h)
@@ -221,7 +221,7 @@
         $"top: {h.Top - Pad:0.##}px; left: {h.Left - Pad:0.##}px; "
         + $"width: {h.Width + (Pad * 2):0.##}px; height: {h.Height + (Pad * 2):0.##}px;";
 
-    /// <summary>Kortet läggs bredvid hålet när det får plats, annars centrerat över det.</summary>
+    /// <summary>The card sits beside the hole when there is room, otherwise centered over it.</summary>
     private string CardStyle()
     {
         if (_hole is not { } h)
@@ -232,13 +232,13 @@
         var left = h.Left - Pad - Gap - CardWidth;
         var right = h.Left + h.Width + Pad + Gap;
 
-        // På smala skärmar finns aldrig plats vid sidan om — kortet centreras alltid där.
+        // On narrow screens there is never room beside it — the card is always centered there.
         if (h.ViewportWidth < (CardWidth * 2) + (Gap * 3))
         {
             return "left: 50%; top: 50%; transform: translate(-50%, -50%);";
         }
 
-        // Räcker marginalen på någon sida lägger vi kortet där, annars centrerat över hålet.
+        // If either side has room we place the card there, otherwise centered over the hole.
         if (left >= Gap)
         {
             return $"left: {left:0.##}px; top: 50%; transform: translateY(-50%);";
